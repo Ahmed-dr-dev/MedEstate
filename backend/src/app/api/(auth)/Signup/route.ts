@@ -3,7 +3,10 @@ import { supabase } from "../../../../../lib/supabaseServer"
 
 export async function POST(req: Request) {
   try {
-    const { email, password, display_name, phone } = await req.json()
+    const body = await req.json()
+    const { email, password, display_name, phone } = body
+
+    console.log("📝 SIGNUP REQUEST:", { email, display_name, phone })
 
     if (!email || !password) {
       return NextResponse.json(
@@ -17,13 +20,16 @@ export async function POST(req: Request) {
       email,
       password,
       options: {
-        data: { display_name, phone }, // user_metadata
+        data: { display_name, phone },
       },
     })
 
     if (error) {
+      console.error("🔥 AUTH ERROR:", error)
       return NextResponse.json({ success: false, error: error.message }, { status: 400 })
     }
+
+    console.log("✅ USER CREATED:", data.user?.id)
 
     return NextResponse.json({
       success: true,
@@ -32,6 +38,10 @@ export async function POST(req: Request) {
     })
   } catch (err: any) {
     console.error("❌ SIGN-UP ERROR:", err)
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
+    console.error("❌ ERROR STACK:", err.stack)
+    return NextResponse.json({ 
+      success: false, 
+      error: err.message || "Internal server error" 
+    }, { status: 500 })
   }
 }

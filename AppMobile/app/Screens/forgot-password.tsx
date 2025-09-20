@@ -42,7 +42,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       // First check if email exists
-      const checkResponse = await fetch(`${API_BASE_URL}/check-email`, {
+      const checkResponse = await fetch(`${API_BASE_URL}/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,11 +56,13 @@ export default function ForgotPasswordScreen() {
       console.log('Email check response:', checkData);
 
       if (checkData.success) {
-        // Email exists, navigate directly to reset password screen
-        router.push({
-          pathname: '/Screens/reset-password',
-          params: { email: email.trim() }
-        });
+        // Email sent successfully, show success modal
+        setEmailSent(true);
+        
+        // Redirect to login after 5 seconds
+        setTimeout(() => {
+          router.replace('/Screens/signin');
+        }, 5000);
       } else {
         Alert.alert('Error', checkData.error || 'Email not found. Please check your email address or create a new account.');
       }
@@ -129,7 +131,7 @@ export default function ForgotPasswordScreen() {
                   <Text style={styles.successTitle}>Email Sent Successfully!</Text>
                   <Text style={styles.successMessage}>
                     Please check your inbox and click the reset link to continue. 
-                    The link will expire in 24 hours.
+                    You'll be redirected to login in 5 seconds.
                   </Text>
                   
                   <View style={styles.emailDisplay}>
