@@ -14,7 +14,7 @@ import {
   Dimensions
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { API_BASE_URL } from '@env';
+import { API_BASE_URL } from '@/constants/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,18 +25,19 @@ export default function ResetPasswordScreen() {
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
-  const [accessToken, setAccessToken] = useState('');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
-    // Get access token from URL parameters or hash
-    const token = params.access_token as string || '';
-    if (token) {
-      setAccessToken(token);
+    // Get email from URL parameters
+    const emailParam = params.email as string || '';
+    
+    if (emailParam) {
+      setEmail(emailParam);
     } else {
-      // If no token, redirect back
+      // If no email, redirect back
       Alert.alert(
-        'Invalid Link',
-        'This reset link is invalid or has expired. Please request a new one.',
+        'Invalid Access',
+        'Please start the password reset process from the forgot password screen.',
         [
           {
             text: 'OK',
@@ -72,27 +73,27 @@ export default function ResetPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (!validateForm()) return;
-    if (!accessToken) {
-      Alert.alert('Error', 'Invalid reset token');
+    if (!email) {
+      Alert.alert('Error', 'Email not found');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}Reset/reset`, {
+      const response = await fetch(`${API_BASE_URL}/direct-reset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          access_token: accessToken,
+          email: email,
           newPassword: formData.newPassword,
         }),
       });
 
       const data = await response.json();
 
-      if (data.ok) {
+      if (data.success) {
         Alert.alert(
           'Success!', 
           'Your password has been reset successfully. You can now sign in with your new password.',
@@ -107,6 +108,7 @@ export default function ResetPasswordScreen() {
         Alert.alert('Error', data.error || 'Failed to reset password');
       }
     } catch (error) {
+      console.error('Reset password error:', error);
       Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -147,7 +149,7 @@ export default function ResetPasswordScreen() {
               </View>
               <Text style={styles.title}>Reset Password</Text>
               <Text style={styles.subtitle}>
-                Enter your new password below
+                Enter your new password for {email}
               </Text>
             </View>
 
@@ -208,7 +210,7 @@ export default function ResetPasswordScreen() {
                 <TouchableOpacity 
                   style={[styles.resetButton, loading && styles.disabledButton]}
                   onPress={handleResetPassword}
-                  disabled={loading || !accessToken}
+                  disabled={loading || !email}
                   activeOpacity={0.8}
                 >
                   <View style={styles.buttonContent}>

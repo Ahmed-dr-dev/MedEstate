@@ -14,7 +14,7 @@ import {
   Dimensions
 } from 'react-native';
 import { router } from 'expo-router';
-import { API_BASE_URL } from '@env';
+import { API_BASE_URL } from '@/constants/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,33 +41,28 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/Reset/request`, {
+      // First check if email exists
+      const checkResponse = await fetch(`${API_BASE_URL}/check-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email: email.trim(),
-          redirectTo: `${API_BASE_URL}/api/(auth)/Callback`
         }),
       });
 
-      const data = await response.json();
+      const checkData = await checkResponse.json();
+      console.log('Email check response:', checkData);
 
-      if (data.ok) {
-        setEmailSent(true);
-        Alert.alert(
-          'Email Sent!', 
-          'We\'ve sent you a password reset link. Please check your email and follow the instructions.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {}
-            }
-          ]
-        );
+      if (checkData.success) {
+        // Email exists, navigate directly to reset password screen
+        router.push({
+          pathname: '/Screens/reset-password',
+          params: { email: email.trim() }
+        });
       } else {
-        Alert.alert('Error', data.error || 'Failed to send reset email');
+        Alert.alert('Error', checkData.error || 'Email not found. Please check your email address or create a new account.');
       }
     } catch (error) {
       Alert.alert('Error', 'Network error. Please try again.');

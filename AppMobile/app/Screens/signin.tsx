@@ -1,83 +1,72 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  SafeAreaView, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
   Alert,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  ScrollView
 } from 'react-native';
 import { router } from 'expo-router';
-import { API_BASE_URL } from '@env';
-
 const { width, height } = Dimensions.get('window');
-
+import { API_BASE_URL } from '@/constants/api';
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    if (!validateEmail(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/Signin`, {
+       
+        const response = await fetch(`${API_BASE_URL}/Signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          email: email.trim(), 
+          password: password.trim() 
+        }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        Alert.alert('Success', 'Signed in successfully!');
-        router.replace('/');
+        Alert.alert('Success', 'Signed in successfully!', [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/Screens/home')
+          }
+        ]);
       } else {
-        Alert.alert('Error', data.error || 'Sign in failed');
+        Alert.alert('Error', data.error || 'Failed to sign in');
       }
     } catch (error) {
       Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email address first');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/(auth)/Reset/request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (data.ok) {
-        Alert.alert('Success', 'Password reset email sent!');
-      } else {
-        Alert.alert('Error', data.error || 'Failed to send reset email');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
     }
   };
 
@@ -99,10 +88,14 @@ export default function SignInScreen() {
         <View style={[styles.floatingSquare, styles.square1]} />
       </View>
 
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView 
-          style={styles.keyboardContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView 
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
             {/* Header Section */}
@@ -114,19 +107,21 @@ export default function SignInScreen() {
                 <Text style={styles.brandName}>MedEstate</Text>
               </View>
               <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Sign in to your account</Text>
+              <Text style={styles.subtitle}>
+                Sign in to your account to continue
+              </Text>
             </View>
 
             {/* Form Section */}
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>Email Address</Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
                     style={styles.input}
                     value={email}
                     onChangeText={setEmail}
-                    placeholder="Enter your email"
+                    placeholder="Enter your email address"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -150,13 +145,13 @@ export default function SignInScreen() {
                 </View>
               </View>
 
-            <TouchableOpacity 
-              style={styles.forgotButton}
-              onPress={() => router.push('/Screens/forgot-password')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.forgotButtonText}>Forgot Password?</Text>
-            </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.forgotPasswordButton}
+                onPress={() => router.push('/Screens/forgot-password')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity 
                 style={[styles.signInButton, loading && styles.disabledButton]}
@@ -182,16 +177,18 @@ export default function SignInScreen() {
             {/* Footer Section */}
             <View style={styles.footer}>
               <TouchableOpacity 
-                style={styles.backButton}
-                onPress={() => router.back()}
+                style={styles.signUpButton}
+                onPress={() => router.push('/Screens/signup')}
                 activeOpacity={0.7}
               >
-                <Text style={styles.backButtonText}>← Back to Welcome</Text>
+                <Text style={styles.signUpButtonText}>
+                  Don't have an account? <Text style={styles.signUpLink}>Sign Up</Text>
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -270,20 +267,22 @@ const styles = StyleSheet.create({
     top: height * 0.35,
     left: width * 0.15,
   },
-  safeArea: {
-    flex: 1,
-  },
   keyboardContainer: {
     flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingTop: StatusBar.currentHeight || 40,
   },
   content: {
     flex: 1,
     paddingHorizontal: 32,
     justifyContent: 'space-between',
+    minHeight: height - (StatusBar.currentHeight || 40),
   },
   header: {
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 60,
   },
   logoContainer: {
     flexDirection: 'row',
@@ -316,7 +315,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 8,
+    marginBottom: 12,
     letterSpacing: -0.5,
   },
   subtitle: {
@@ -324,11 +323,12 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     letterSpacing: 0.3,
+    paddingHorizontal: 20,
   },
   form: {
     flex: 1,
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: 40,
   },
   inputContainer: {
     marginBottom: 24,
@@ -352,13 +352,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
   },
-  forgotButton: {
-    alignItems: 'flex-end',
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
     marginBottom: 32,
+    paddingVertical: 8,
   },
-  forgotButtonText: {
+  forgotPasswordText: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     letterSpacing: 0.3,
   },
@@ -407,13 +408,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 40,
   },
-  backButton: {
+  signUpButton: {
     paddingVertical: 12,
   },
-  backButtonText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  signUpButtonText: {
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 16,
-    fontWeight: '500',
     letterSpacing: 0.3,
+    textAlign: 'center',
+  },
+  signUpLink: {
+    color: 'white',
+    fontWeight: '600',
   },
 });

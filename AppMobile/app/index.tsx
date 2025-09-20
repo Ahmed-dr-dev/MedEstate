@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Dimensions } from 'react-native';
 import { router } from 'expo-router';
 const { width, height } = Dimensions.get('window');
-
+import { API_BASE_URL } from '../constants/api';
 export default function Index() {
+  const [testConnection, setTestConnection] = useState(false);
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
@@ -43,6 +44,22 @@ export default function Index() {
           <View style={styles.mainContent}>
             <View style={styles.heroSection}>
               <Text style={styles.heroTitle}>Find Your Perfect{'\n'}Real Estate</Text>
+              <Text style={styles.heroTitle}>{API_BASE_URL}</Text>
+               <TouchableOpacity 
+                 style={styles.testButton}
+                 onPress={() => {
+                   fetch(`${API_BASE_URL}/TestConnection`, {
+                     method: 'POST',
+                   }).then(response => {
+                     setTestConnection(true);
+                     console.log('Connection test successful');
+                   }).catch(error => {
+                     console.log('Connection test failed:', error);
+                   });
+                 }}
+               >
+                 <Text style={styles.testButtonText}>Test Backend Connection</Text>
+               </TouchableOpacity>
               <Text style={styles.heroSubtitle}>
                 Discover premium real estate properties tailored for your needs
               </Text>
@@ -287,5 +304,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     letterSpacing: 0.3,
+  },
+  testButton: {
+    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginVertical: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
