@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import { router } from 'expo-router';
 const { width, height } = Dimensions.get('window');
 import { API_BASE_URL } from '../constants/api';
@@ -25,7 +25,7 @@ export default function Index() {
         <View style={[styles.floatingSquare, styles.square2]} />
       </View>
 
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         <View style={styles.content}>
           {/* Header Section */}
           <View style={styles.headerSection}>
@@ -90,7 +90,7 @@ export default function Index() {
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -183,6 +183,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    paddingTop: StatusBar.currentHeight || 40,
   },
   content: {
     flex: 1,

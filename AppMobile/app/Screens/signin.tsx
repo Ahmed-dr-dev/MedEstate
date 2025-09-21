@@ -14,12 +14,12 @@ import {
   ScrollView
 } from 'react-native';
 import { router } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
 const { width, height } = Dimensions.get('window');
-import { API_BASE_URL } from '@/constants/api';
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { signIn, isLoading } = useAuth();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -37,37 +37,12 @@ export default function SignInScreen() {
       return;
     }
 
-    setLoading(true);
-    try {
-       
-        const response = await fetch(`${API_BASE_URL}/Signin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email: email.trim(), 
-          password: password.trim() 
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        Alert.alert('Success', 'Signed in successfully!', [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/Screens/home')
-          }
-        ]);
-      } else {
-        Alert.alert('Error', data.error || 'Failed to sign in');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
-    } finally {
-      setLoading(false);
+    const result = await signIn(email.trim(), password.trim());
+    
+    if (!result.success) {
+      Alert.alert('Error', result.error || 'Failed to sign in');
     }
+    // Success case is handled automatically by signIn function (auto-redirect)
   };
 
   return (
@@ -154,13 +129,13 @@ export default function SignInScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={[styles.signInButton, loading && styles.disabledButton]}
+                style={[styles.signInButton, isLoading && styles.disabledButton]}
                 onPress={handleSignIn}
-                disabled={loading}
+                disabled={isLoading}
                 activeOpacity={0.8}
               >
                 <View style={styles.buttonContent}>
-                  {loading ? (
+                  {isLoading ? (
                     <ActivityIndicator color="white" />
                   ) : (
                     <>

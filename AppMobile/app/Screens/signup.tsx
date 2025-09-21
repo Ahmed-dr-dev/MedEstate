@@ -11,7 +11,8 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
-  ScrollView
+  ScrollView,
+  Modal
 } from 'react-native';
 import { router } from 'expo-router';
 import { API_BASE_URL } from '@/constants/api';
@@ -23,6 +24,7 @@ interface FormData {
   phone: string;
   password: string;
   confirmPassword: string;
+  role: 'buyer' | 'seller' | 'bank_agent' | 'admin';
 }
 
 export default function SignUpScreen() {
@@ -31,9 +33,18 @@ export default function SignUpScreen() {
     email: '',
     phone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'buyer'
   });
   const [loading, setLoading] = useState(false);
+  const [showRolePicker, setShowRolePicker] = useState(false);
+
+  const roles = [
+    { value: 'buyer', label: 'Buyer', description: 'Looking to purchase  properties' },
+    { value: 'seller', label: 'Seller', description: 'Selling  properties' },
+    { value: 'bank_agent', label: 'Bank Agent', description: 'Financial institution representative' },
+    { value: 'admin', label: 'Admin', description: 'Platform administrator' }
+  ];
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({
@@ -108,6 +119,7 @@ export default function SignUpScreen() {
           password: formData.password,
           display_name: formData.display_name.trim(),
           phone: formData.phone.trim() || null,
+          role: formData.role,
         }),
       });
 
@@ -225,6 +237,22 @@ export default function SignUpScreen() {
               </View>
 
               <View style={styles.inputContainer}>
+                <Text style={styles.label}>Role</Text>
+                <TouchableOpacity 
+                  style={styles.inputWrapper}
+                  onPress={() => setShowRolePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.input}>
+                    <Text style={styles.roleText}>
+                      {roles.find(r => r.value === formData.role)?.label || 'Select Role'}
+                    </Text>
+                    <Text style={styles.roleArrow}>▼</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputContainer}>
                 <Text style={styles.label}>Password</Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
@@ -311,6 +339,62 @@ export default function SignUpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Role Picker Modal */}
+      <Modal
+        visible={showRolePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowRolePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Your Role</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowRolePicker(false)}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.rolesList}>
+              {roles.map((role) => (
+                <TouchableOpacity
+                  key={role.value}
+                  style={[
+                    styles.roleOption,
+                    formData.role === role.value && styles.selectedRole
+                  ]}
+                  onPress={() => {
+                    handleInputChange('role', role.value);
+                    setShowRolePicker(false);
+                  }}
+                >
+                  <View style={styles.roleInfo}>
+                    <Text style={[
+                      styles.roleOptionLabel,
+                      formData.role === role.value && styles.selectedRoleText
+                    ]}>
+                      {role.label}
+                    </Text>
+                    <Text style={[
+                      styles.roleDescription,
+                      formData.role === role.value && styles.selectedRoleDescription
+                    ]}>
+                      {role.description}
+                    </Text>
+                  </View>
+                  {formData.role === role.value && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -557,5 +641,97 @@ const styles = StyleSheet.create({
   signInLink: {
     color: 'white',
     fontWeight: '600',
+  },
+  roleText: {
+    color: 'white',
+    fontSize: 16,
+    flex: 1,
+  },
+  roleArrow: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1e293b',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: height * 0.7,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    letterSpacing: -0.5,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  rolesList: {
+    padding: 16,
+  },
+  roleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  selectedRole: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderColor: 'rgba(59, 130, 246, 0.5)',
+  },
+  roleInfo: {
+    flex: 1,
+  },
+  roleOptionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  selectedRoleText: {
+    color: '#60a5fa',
+  },
+  roleDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+    letterSpacing: 0.2,
+  },
+  selectedRoleDescription: {
+    color: 'rgba(96, 165, 250, 0.8)',
+  },
+  checkmark: {
+    fontSize: 18,
+    color: '#60a5fa',
+    fontWeight: 'bold',
   },
 });
