@@ -126,14 +126,8 @@ export default function Home() {
                 <Text style={styles.actionSubtitle}>View all available properties</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity 
-                style={styles.actionCard}
-                onPress={() => router.push('/Screens/Seller/Dashboard')}
-              >
-                <Text style={styles.actionTitle}>📊 Seller Dashboard</Text>
-                <Text style={styles.actionSubtitle}>Manage property listings</Text>
-              </TouchableOpacity>
-              
+            
+               
               <TouchableOpacity 
                 style={styles.actionCard}
                 onPress={() => router.push('/Screens/BankAgent/LoanReviewDashboard')}

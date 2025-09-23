@@ -1,10 +1,70 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Dimensions } from 'react-native';
+import React, { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Dimensions, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext';
 const { width, height } = Dimensions.get('window');
 import { API_BASE_URL } from '../constants/api';
+
 export default function Index() {
   const [testConnection, setTestConnection] = useState(false);
+  const { isAuthenticated, isLoading, user, validateSession } = useAuth();
+
+  // Check authentication status and redirect if needed
+  useEffect(() => {
+    const checkAuthAndRedirect = async () => {
+      if (!isLoading) {
+        if (isAuthenticated && user) {
+          // User is authenticated, redirect to their dashboard
+          console.log('🚀 REDIRECT - User authenticated, redirecting to dashboard');
+          redirectToRoleDashboard(user.role);
+        } else {
+          // Check if there's a stored session that might be valid
+          const isValid = await validateSession();
+          if (isValid && user) {
+            console.log('🚀 REDIRECT - Session validated, redirecting to dashboard');
+            redirectToRoleDashboard(user.role);
+          }
+        }
+      }
+    };
+
+    checkAuthAndRedirect();
+  }, [isLoading, isAuthenticated, user, validateSession]);
+
+  const redirectToRoleDashboard = (userRole: string) => {
+    switch (userRole) {
+      case 'buyer':
+        router.replace('/Screens/Buyer/Dashboard');
+        break;
+      case 'seller':
+        router.replace('/Screens/Seller/Dashboard');
+        break;
+      case 'bank_agent':
+        router.replace('/Screens/BankAgent/LoanReviewDashboard');
+        break;
+      case 'admin':
+        router.replace('/Screens/home');
+        break;
+      default:
+        router.replace('/Screens/Buyer/Dashboard');
+        break;
+    }
+  };
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // Don't show landing page if user is authenticated
+  if (isAuthenticated && user) {
+    return null; // Will redirect via useEffect
+  }
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
@@ -321,5 +381,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 16,
+    marginTop: 16,
+    fontWeight: '500',
   },
 });
