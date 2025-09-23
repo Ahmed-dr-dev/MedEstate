@@ -11,6 +11,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
 import BottomNavigation from '../../../components/BankAgent/BottomNavigation';
 
@@ -28,6 +29,7 @@ interface BankAgentProfile {
 
 export default function BankAgentProfile() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const { width, height } = Dimensions.get('window');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -73,7 +75,6 @@ export default function BankAgentProfile() {
     setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
     setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
   }, []);
-  const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState<BankAgentProfile>({
     bankName: 'First National Bank',
     agentName: user?.display_name || 'John Smith',
@@ -93,10 +94,6 @@ export default function BankAgentProfile() {
     }));
   };
 
-  const handleSaveProfile = () => {
-    setIsEditing(false);
-    Alert.alert('Success', 'Profile updated successfully!');
-  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -130,17 +127,7 @@ export default function BankAgentProfile() {
   const renderProfileField = (label: string, value: string, field: keyof BankAgentProfile, editable: boolean = true) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      {isEditing && editable ? (
-        <TextInput
-          style={styles.fieldInput}
-          value={value}
-          onChangeText={(text) => handleInputChange(field, text)}
-          placeholder={`Enter ${label.toLowerCase()}`}
-          placeholderTextColor="#94a3b8"
-        />
-      ) : (
-        <Text style={styles.fieldValue}>{value}</Text>
-      )}
+      <Text style={styles.fieldValue}>{value}</Text>
     </View>
   );
 
@@ -206,13 +193,6 @@ export default function BankAgentProfile() {
               <Text style={styles.subtitle}>Manage Your Information</Text>
             </View>
           </View>
-          <TouchableOpacity 
-            style={styles.editButton}
-            onPress={() => setIsEditing(!isEditing)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.editButtonText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
-          </TouchableOpacity>
         </Animated.View>
 
         {/* Verification Status */}
@@ -271,18 +251,6 @@ export default function BankAgentProfile() {
           {renderProfileField('License Number', profile.licenseNumber, 'licenseNumber')}
         </Animated.View>
 
-        {/* Actions */}
-        {isEditing && (
-          <Animated.View
-            style={{
-              transform: [{ translateY: slideAnim }],
-            }}
-          >
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile} activeOpacity={0.8}>
-              <Text style={styles.saveButtonText}>Save Changes</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
 
         <Animated.View
           style={{
@@ -303,6 +271,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1e293b',
+    paddingBottom: 80,
   },
   floatingElement: {
     position: 'absolute',

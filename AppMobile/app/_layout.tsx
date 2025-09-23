@@ -86,6 +86,10 @@ export default function RootLayout() {
         
         {/* Bank Agent Screens */}
         <Stack.Screen 
+          name="Screens/BankAgent/Registration" 
+          options={{ title: 'Bank Agent Registration' }}
+        />
+        <Stack.Screen 
           name="Screens/BankAgent/Dashboard" 
           options={{ title: 'Bank Agent Dashboard' }}
         />

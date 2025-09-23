@@ -323,52 +323,6 @@ export default function LoanReviewDashboard() {
             <Text style={styles.subtitle}>Review and manage loan applications</Text>
           </View>
 
-          {/* Stats Cards */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <View style={styles.statIconContainer}>
-                <Text style={styles.statIcon}>📊</Text>
-              </View>
-              <View style={styles.statContent}>
-                <Text style={styles.statNumber}>{stats.totalApplications}</Text>
-                <Text style={styles.statTitle}>Total Applications</Text>
-                <Text style={styles.statSubtitle}>This month</Text>
-              </View>
-            </View>
-            
-            <View style={[styles.statCard, styles.pendingCard]}>
-              <View style={styles.statIconContainer}>
-                <Text style={styles.statIcon}>⏳</Text>
-              </View>
-              <View style={styles.statContent}>
-                <Text style={[styles.statNumber, { color: '#f59e0b' }]}>{stats.pendingReview}</Text>
-                <Text style={styles.statTitle}>Pending Review</Text>
-                <Text style={styles.statSubtitle}>Needs attention</Text>
-              </View>
-            </View>
-            
-            <View style={[styles.statCard, styles.approvedCard]}>
-              <View style={styles.statIconContainer}>
-                <Text style={styles.statIcon}>✅</Text>
-              </View>
-              <View style={styles.statContent}>
-                <Text style={[styles.statNumber, { color: '#10b981' }]}>{stats.approved}</Text>
-                <Text style={styles.statTitle}>Approved</Text>
-                <Text style={styles.statSubtitle}>This month</Text>
-              </View>
-            </View>
-            
-            <View style={[styles.statCard, styles.rejectedCard]}>
-              <View style={styles.statIconContainer}>
-                <Text style={styles.statIcon}>❌</Text>
-              </View>
-              <View style={styles.statContent}>
-                <Text style={[styles.statNumber, { color: '#ef4444' }]}>{stats.rejected}</Text>
-                <Text style={styles.statTitle}>Rejected</Text>
-                <Text style={styles.statSubtitle}>This month</Text>
-              </View>
-            </View>
-          </View>
 
           {/* Search */}
           <View style={styles.searchSection}>
@@ -464,6 +418,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f172a',
+    paddingBottom: 80,
   },
   // Background gradient styles
   backgroundGradient: {
