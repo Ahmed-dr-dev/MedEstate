@@ -10,7 +10,6 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface Bank {
   id: string;
@@ -50,7 +49,11 @@ export default function NewLoanApplication() {
     propertyDescription: '',
     employmentStatus: '',
     annualIncome: '',
-    creditScore: ''
+    creditScore: '',
+    includeInsurance: false,
+    insuranceType: 'homeowners',
+    insuranceAmount: '',
+    insuranceProvider: ''
   });
 
   const banks: Bank[] = [
@@ -104,7 +107,8 @@ export default function NewLoanApplication() {
     { id: 1, title: 'Property Details', description: 'Basic property information' },
     { id: 2, title: 'Financial Info', description: 'Income and credit details' },
     { id: 3, title: 'Bank Selection', description: 'Choose your preferred bank' },
-    { id: 4, title: 'Review & Submit', description: 'Review and submit application' }
+    { id: 4, title: 'Insurance', description: 'Property insurance options' },
+    { id: 5, title: 'Review & Submit', description: 'Review and submit application' }
   ];
 
   const validateStep = (step: number) => {
@@ -116,6 +120,8 @@ export default function NewLoanApplication() {
       case 3:
         return selectedBank !== null;
       case 4:
+        return true; // Insurance is optional
+      case 5:
         return true;
       default:
         return false;
@@ -123,7 +129,7 @@ export default function NewLoanApplication() {
   };
 
   const nextStep = () => {
-    if (validateStep(currentStep) && currentStep < 4) {
+    if (validateStep(currentStep) && currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -176,7 +182,11 @@ export default function NewLoanApplication() {
         propertyDescription: '',
         employmentStatus: '',
         annualIncome: '',
-        creditScore: ''
+        creditScore: '',
+        includeInsurance: false,
+        insuranceType: 'homeowners',
+        insuranceAmount: '',
+        insuranceProvider: ''
       });
       setSelectedBank(null);
     }, 2000);
@@ -344,6 +354,98 @@ export default function NewLoanApplication() {
       case 4:
         return (
           <View style={styles.stepContent}>
+            <Text style={styles.stepContentTitle}>Property Insurance</Text>
+            <Text style={styles.stepContentSubtitle}>Protect your investment with property insurance</Text>
+            
+            <View style={styles.inputGroup}>
+              <TouchableOpacity 
+                style={styles.insuranceToggle}
+                onPress={() => setApplicationForm(prev => ({ ...prev, includeInsurance: !prev.includeInsurance }))}
+              >
+                <View style={styles.toggleRow}>
+                  <Text style={styles.toggleLabel}>Include Property Insurance</Text>
+                  <View style={[styles.toggleSwitch, applicationForm.includeInsurance && styles.toggleSwitchActive]}>
+                    <View style={[styles.toggleThumb, applicationForm.includeInsurance && styles.toggleThumbActive]} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {applicationForm.includeInsurance && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Insurance Type</Text>
+                  <View style={styles.insuranceTypeContainer}>
+                    {[
+                      { id: 'homeowners', label: 'Homeowners Insurance', description: 'Comprehensive coverage' },
+                      { id: 'condo', label: 'Condo Insurance', description: 'For condominiums' },
+                      { id: 'renters', label: 'Renters Insurance', description: 'Personal property coverage' }
+                    ].map((type) => (
+                      <TouchableOpacity
+                        key={type.id}
+                        style={[
+                          styles.insuranceTypeOption,
+                          applicationForm.insuranceType === type.id && styles.insuranceTypeOptionSelected
+                        ]}
+                        onPress={() => setApplicationForm(prev => ({ ...prev, insuranceType: type.id }))}
+                      >
+                        <Text style={[
+                          styles.insuranceTypeLabel,
+                          applicationForm.insuranceType === type.id && styles.insuranceTypeLabelSelected
+                        ]}>
+                          {type.label}
+                        </Text>
+                        <Text style={[
+                          styles.insuranceTypeDescription,
+                          applicationForm.insuranceType === type.id && styles.insuranceTypeDescriptionSelected
+                        ]}>
+                          {type.description}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Annual Insurance Premium ($)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={applicationForm.insuranceAmount}
+                    onChangeText={(text) => setApplicationForm(prev => ({ ...prev, insuranceAmount: text }))}
+                    placeholder="Enter annual premium"
+                    keyboardType="numeric"
+                    placeholderTextColor="#64748b"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Insurance Provider</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={applicationForm.insuranceProvider}
+                    onChangeText={(text) => setApplicationForm(prev => ({ ...prev, insuranceProvider: text }))}
+                    placeholder="Enter insurance company name"
+                    placeholderTextColor="#64748b"
+                  />
+                </View>
+
+                <View style={styles.insuranceInfo}>
+                  <Text style={styles.insuranceInfoTitle}>🛡️ Why Property Insurance?</Text>
+                  <Text style={styles.insuranceInfoText}>
+                    • Protects your property from damage (fire, storms, theft)
+                    • Covers liability if someone is injured on your property
+                    • Required by most lenders for mortgage approval
+                    • Provides peace of mind for your investment
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+        );
+
+      case 5:
+        return (
+          <View style={styles.stepContent}>
             <Text style={styles.stepContentTitle}>Review Your Application</Text>
             <Text style={styles.stepContentSubtitle}>Please review all information before submitting</Text>
             
@@ -394,6 +496,26 @@ export default function NewLoanApplication() {
                 <Text style={styles.reviewValue}>{selectedBank?.interestRate}</Text>
               </View>
             </View>
+
+            {applicationForm.includeInsurance && (
+              <View style={styles.reviewCard}>
+                <Text style={styles.reviewSectionTitle}>Insurance Information</Text>
+                <View style={styles.reviewRow}>
+                  <Text style={styles.reviewLabel}>Insurance Type:</Text>
+                  <Text style={styles.reviewValue}>{applicationForm.insuranceType.charAt(0).toUpperCase() + applicationForm.insuranceType.slice(1)} Insurance</Text>
+                </View>
+                <View style={styles.reviewRow}>
+                  <Text style={styles.reviewLabel}>Annual Premium:</Text>
+                  <Text style={styles.reviewValue}>${applicationForm.insuranceAmount}</Text>
+                </View>
+                {applicationForm.insuranceProvider && (
+                  <View style={styles.reviewRow}>
+                    <Text style={styles.reviewLabel}>Provider:</Text>
+                    <Text style={styles.reviewValue}>{applicationForm.insuranceProvider}</Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         );
 
@@ -404,7 +526,7 @@ export default function NewLoanApplication() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f0f9ff" />
+      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       
       <ScrollView 
         style={styles.scrollView} 
@@ -425,55 +547,55 @@ export default function NewLoanApplication() {
           </TouchableOpacity>
         </View>
 
-        {/* Step Tabs */}
-        <View style={styles.stepTabs}>
-          {steps.map((step, index) => (
-            <TouchableOpacity
-              key={step.id}
-              style={[
-                styles.stepTab,
-                currentStep === step.id && styles.stepTabActive
-              ]}
-              onPress={() => setCurrentStep(step.id)}
-            >
-              <Text style={[
-                styles.stepTabText,
-                currentStep === step.id && styles.stepTabTextActive
-              ]}>
-                {step.title}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Step Indicators */}
-        <View style={styles.stepIndicators}>
-          {steps.map((step, index) => (
-            <View key={step.id} style={styles.indicatorContainer}>
-              <View style={[
-                styles.indicator,
-                currentStep >= step.id && styles.indicatorActive,
-                currentStep > step.id && styles.indicatorCompleted
-              ]}>
-                {currentStep > step.id ? (
-                  <Text style={styles.checkmark}>✓</Text>
-                ) : (
-                  <Text style={[
-                    styles.indicatorNumber,
-                    currentStep === step.id && styles.indicatorNumberActive
-                  ]}>
-                    {step.id}
-                  </Text>
-                )}
-              </View>
-              {index < steps.length - 1 && (
-                <View style={[
-                  styles.indicatorLine,
-                  currentStep > step.id && styles.indicatorLineActive
-                ]} />
-              )}
+        {/* Compact Step Progress */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressTitle}>Step {currentStep} of {steps.length}</Text>
+            <Text style={styles.progressSubtitle}>{steps[currentStep - 1]?.title}</Text>
+          </View>
+          
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${(currentStep / steps.length) * 100}%` }
+                ]} 
+              />
             </View>
-          ))}
+            <Text style={styles.progressPercentage}>
+              {Math.round((currentStep / steps.length) * 100)}%
+            </Text>
+          </View>
+          
+          <View style={styles.stepDots}>
+            {steps.map((step, index) => (
+              <View key={step.id} style={styles.stepDotContainer}>
+                <View style={[
+                  styles.stepDot,
+                  currentStep >= step.id && styles.stepDotActive,
+                  currentStep > step.id && styles.stepDotCompleted
+                ]}>
+                  {currentStep > step.id ? (
+                    <Text style={styles.stepDotCheckmark}>✓</Text>
+                  ) : (
+                    <Text style={[
+                      styles.stepDotNumber,
+                      currentStep === step.id && styles.stepDotNumberActive
+                    ]}>
+                      {step.id}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[
+                  styles.stepDotLabel,
+                  currentStep === step.id && styles.stepDotLabelActive
+                ]}>
+                  {step.title.split(' ')[0]}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Step Content */}
@@ -567,7 +689,7 @@ export default function NewLoanApplication() {
         )}
       </ScrollView>
 
-      <BuyerBottomNavigation />
+      
     </View>
   );
 }
@@ -575,7 +697,7 @@ export default function NewLoanApplication() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#1e293b',
   },
   scrollView: {
     flex: 1,
@@ -589,13 +711,13 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#1e293b',
   },
   headerBackButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -607,7 +729,7 @@ const styles = StyleSheet.create({
   },
   backButtonIcon: {
     fontSize: 20,
-    color: '#64748b',
+    color: '#e2e8f0',
     fontWeight: 'bold',
   },
   headerContent: {
@@ -615,19 +737,19 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 4,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   helpButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -639,91 +761,106 @@ const styles = StyleSheet.create({
   helpIcon: {
     fontSize: 20,
   },
-  // Step Tabs
-  stepTabs: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
+  // Compact Progress Design
+  progressContainer: {
+    backgroundColor: '#334155',
     marginHorizontal: 20,
     marginBottom: 20,
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
   },
-  stepTab: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+  progressHeader: {
     alignItems: 'center',
+    marginBottom: 16,
   },
-  stepTabActive: {
-    backgroundColor: '#3b82f6',
-  },
-  stepTabText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  stepTabTextActive: {
-    color: 'white',
+  progressTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 4,
   },
-  // Step Indicators
-  stepIndicators: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 30,
-    paddingHorizontal: 20,
+  progressSubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
   },
-  indicatorContainer: {
+  progressBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
   },
-  indicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#e2e8f0',
-    justifyContent: 'center',
+  progressBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#475569',
+    borderRadius: 3,
+    marginRight: 12,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 3,
+  },
+  progressPercentage: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0ea5e9',
+    minWidth: 35,
+  },
+  stepDots: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  indicatorActive: {
-    backgroundColor: '#3b82f6',
+  stepDotContainer: {
+    alignItems: 'center',
+    flex: 1,
   },
-  indicatorCompleted: {
+  stepDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#475569',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  stepDotActive: {
+    backgroundColor: '#0ea5e9',
+  },
+  stepDotCompleted: {
     backgroundColor: '#10b981',
   },
-  indicatorNumber: {
-    fontSize: 14,
+  stepDotNumber: {
+    fontSize: 10,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#94a3b8',
   },
-  indicatorNumberActive: {
+  stepDotNumberActive: {
     color: 'white',
   },
-  checkmark: {
-    fontSize: 16,
+  stepDotCheckmark: {
+    fontSize: 12,
     color: 'white',
     fontWeight: 'bold',
   },
-  indicatorLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: 8,
+  stepDotLabel: {
+    fontSize: 10,
+    color: '#94a3b8',
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  indicatorLineActive: {
-    backgroundColor: '#10b981',
+  stepDotLabelActive: {
+    color: '#0ea5e9',
+    fontWeight: '600',
   },
   // Step Content
   stepContentContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     marginHorizontal: 20,
     borderRadius: 16,
     padding: 24,
@@ -740,18 +877,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   continueButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#0ea5e9',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   continueButtonDisabled: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#475569',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -761,7 +898,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   continueButtonTextDisabled: {
-    color: '#94a3b8',
+    color: '#64748b',
   },
   // Step Content
   stepContent: {
@@ -770,12 +907,12 @@ const styles = StyleSheet.create({
   stepContentTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 8,
   },
   stepContentSubtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 32,
   },
   inputGroup: {
@@ -792,17 +929,17 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#e2e8f0',
     marginBottom: 12,
   },
   input: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#475569',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    color: '#1e293b',
+    borderColor: '#64748b',
+    color: '#f8fafc',
   },
   textArea: {
     height: 80,
@@ -818,33 +955,33 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
+    borderColor: '#64748b',
+    backgroundColor: '#475569',
   },
   radioOptionSelected: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0ea5e9',
   },
   radioText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     fontWeight: '500',
   },
   radioTextSelected: {
     color: 'white',
   },
   bankSelector: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#475569',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#64748b',
     marginBottom: 20,
   },
   bankSelectorLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#e2e8f0',
     marginBottom: 8,
   },
   bankSelectorContent: {
@@ -864,33 +1001,33 @@ const styles = StyleSheet.create({
   bankName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   bankRate: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   bankSelectorPlaceholder: {
     fontSize: 16,
-    color: '#94a3b8',
+    color: '#64748b',
     flex: 1,
   },
   bankSelectorArrow: {
     fontSize: 20,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   selectedBankCard: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#475569',
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: '#0ea5e9',
   },
   selectedBankTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 12,
   },
   selectedBankInfo: {
@@ -907,17 +1044,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   reviewCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#475569',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#64748b',
   },
   reviewSectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 12,
   },
   reviewRow: {
@@ -928,12 +1065,12 @@ const styles = StyleSheet.create({
   },
   reviewLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     fontWeight: '500',
   },
   reviewValue: {
     fontSize: 14,
-    color: '#1e293b',
+    color: '#f8fafc',
     fontWeight: '600',
   },
   navigationButtons: {
@@ -1012,7 +1149,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   bankSelectionCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     borderRadius: 16,
     padding: 20,
     margin: 20,
@@ -1033,11 +1170,11 @@ const styles = StyleSheet.create({
   bankSelectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   closeButton: {
     fontSize: 20,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   bankOption: {
     flexDirection: 'row',
@@ -1045,9 +1182,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#64748b',
     marginBottom: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#475569',
   },
   bankOptionLogo: {
     fontSize: 32,
@@ -1065,7 +1202,7 @@ const styles = StyleSheet.create({
   bankOptionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     flex: 1,
   },
   verificationBadge: {
@@ -1085,12 +1222,96 @@ const styles = StyleSheet.create({
   },
   bankOptionDetails: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 4,
   },
   bankOptionRating: {
     fontSize: 12,
     color: '#f59e0b',
+  },
+  // Insurance Styles
+  insuranceToggle: {
+    marginBottom: 24,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#475569',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleSwitchActive: {
+    backgroundColor: '#0ea5e9',
+  },
+  toggleThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#f8fafc',
+    alignSelf: 'flex-start',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
+  insuranceTypeContainer: {
+    gap: 12,
+  },
+  insuranceTypeOption: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#64748b',
+  },
+  insuranceTypeOptionSelected: {
+    backgroundColor: '#334155',
+    borderColor: '#0ea5e9',
+  },
+  insuranceTypeLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e2e8f0',
+    marginBottom: 4,
+  },
+  insuranceTypeLabelSelected: {
+    color: '#f8fafc',
+  },
+  insuranceTypeDescription: {
+    fontSize: 14,
+    color: '#94a3b8',
+  },
+  insuranceTypeDescriptionSelected: {
+    color: '#e2e8f0',
+  },
+  insuranceInfo: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0ea5e9',
+  },
+  insuranceInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 8,
+  },
+  insuranceInfoText: {
+    fontSize: 14,
+    color: '#e2e8f0',
+    lineHeight: 20,
   },
 });
 

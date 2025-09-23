@@ -10,7 +10,6 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface LoanApplication {
   id: string;
@@ -298,7 +297,7 @@ export default function LoanApplicationResults() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       
       <ScrollView 
         style={styles.scrollView} 
@@ -450,10 +449,10 @@ export default function LoanApplicationResults() {
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity 
-                    style={[styles.modalActionButton, { backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' }]}
+                    style={[styles.modalActionButton, { backgroundColor: '#475569', borderWidth: 1, borderColor: '#64748b' }]}
                     onPress={() => setShowModal(false)}
                   >
-                    <Text style={[styles.modalActionButtonText, { color: '#64748b' }]}>Close</Text>
+                    <Text style={[styles.modalActionButtonText, { color: '#e2e8f0' }]}>Close</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -502,7 +501,7 @@ export default function LoanApplicationResults() {
 
                 <View style={styles.modalActions}>
                   <TouchableOpacity 
-                    style={[styles.modalActionButton, { backgroundColor: '#3b82f6' }]}
+                    style={[styles.modalActionButton, { backgroundColor: '#0ea5e9' }]}
                     onPress={() => setShowActionInfo(false)}
                   >
                     <Text style={styles.modalActionButtonText}>Got it</Text>
@@ -514,7 +513,7 @@ export default function LoanApplicationResults() {
         </View>
       </Modal>
 
-      <BuyerBottomNavigation />
+      
     </View>
   );
 }
@@ -522,7 +521,7 @@ export default function LoanApplicationResults() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1e293b',
   },
   scrollView: {
     flex: 1,
@@ -536,20 +535,20 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: 'white',
+    backgroundColor: '#1e293b',
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   backButtonIcon: {
     fontSize: 20,
-    color: '#64748b',
+    color: '#e2e8f0',
     fontWeight: 'bold',
   },
   headerContent: {
@@ -557,19 +556,19 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 4,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   helpButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -584,12 +583,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#475569',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -599,12 +598,12 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: '#0ea5e9',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#94a3b8',
     textAlign: 'center',
   },
   filtersContainer: {
@@ -618,18 +617,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#334155',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#475569',
     marginRight: 8,
   },
   filterChipActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0ea5e9',
   },
   filterChipText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     fontWeight: '500',
   },
   filterChipTextActive: {
@@ -642,16 +641,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 16,
   },
   applicationCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#475569',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -670,12 +669,12 @@ const styles = StyleSheet.create({
   applicationProperty: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 4,
   },
   applicationBank: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -693,14 +692,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   statusMessage: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#475569',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
   statusMessageText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     fontStyle: 'italic',
   },
   applicationDetails: {
@@ -714,31 +713,31 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   detailValue: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   viewDetailsButton: {
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#475569',
   },
   viewDetailsText: {
-    color: '#3b82f6',
+    color: '#0ea5e9',
     fontSize: 14,
     fontWeight: '600',
   },
   emptyState: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     borderRadius: 16,
     padding: 40,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#475569',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -752,25 +751,25 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     textAlign: 'center',
     marginBottom: 16,
   },
   clearFilterButton: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#475569',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#64748b',
   },
   clearFilterButtonText: {
-    color: '#3b82f6',
+    color: '#0ea5e9',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -781,7 +780,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -793,24 +792,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#475569',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#475569',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     fontWeight: 'bold',
   },
   modalBody: {
@@ -823,12 +822,12 @@ const styles = StyleSheet.create({
   modalPropertyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 4,
   },
   modalBankName: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 12,
   },
   modalStatusBadge: {
@@ -853,7 +852,7 @@ const styles = StyleSheet.create({
   modalSectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 12,
   },
   modalDetailRow: {
@@ -862,33 +861,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f8fafc',
+    borderBottomColor: '#475569',
   },
   modalDetailLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   modalDetailValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   modalStatusMessage: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#475569',
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
   },
   modalStatusMessageText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     fontStyle: 'italic',
     textAlign: 'center',
   },
   modalActions: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#475569',
     gap: 12,
   },
   modalActionButton: {
@@ -903,7 +902,7 @@ const styles = StyleSheet.create({
   },
   // Action Info Modal Styles
   actionInfoModalContent: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '85%',
@@ -928,7 +927,7 @@ const styles = StyleSheet.create({
   actionInfoContent: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#1e293b',
+    color: '#f8fafc',
     textAlign: 'left',
   },
 });

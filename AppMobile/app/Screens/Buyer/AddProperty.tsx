@@ -13,7 +13,6 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface PropertyFormData {
   title: string;
@@ -132,7 +131,7 @@ export default function AddProperty() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -300,7 +299,6 @@ export default function AddProperty() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <BuyerBottomNavigation />
     </View>
   );
 }
@@ -308,7 +306,7 @@ export default function AddProperty() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1e293b',
   },
   keyboardView: {
     flex: 1,
@@ -319,20 +317,20 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: 'white',
+    backgroundColor: '#1e293b',
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   backButtonIcon: {
     fontSize: 20,
-    color: '#64748b',
+    color: '#e2e8f0',
     fontWeight: 'bold',
   },
   headerContent: {
@@ -341,16 +339,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    backgroundColor: '#1e293b',
   },
   section: {
     marginBottom: 32,
@@ -358,7 +357,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 16,
   },
   inputContainer: {
@@ -367,18 +366,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#e2e8f0',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 16,
-    color: '#1e293b',
+    color: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#475569',
   },
   textArea: {
     height: 100,
@@ -392,21 +391,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   typeOption: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#334155',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
     marginRight: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#475569',
   },
   selectedType: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0ea5e9',
   },
   typeOptionText: {
-    color: '#64748b',
+    color: '#94a3b8',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -414,12 +413,12 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   addImageButton: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#334155',
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
+    borderColor: '#475569',
     borderStyle: 'dashed',
   },
   addImageIcon: {
@@ -429,12 +428,12 @@ const styles = StyleSheet.create({
   addImageText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 4,
   },
   addImageSubtext: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   imagesContainer: {
     flexDirection: 'row',
@@ -450,7 +449,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#475569',
   },
   removeImageButton: {
     position: 'absolute',
@@ -469,12 +468,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   submitButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#0ea5e9',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 16,
-    shadowColor: '#3b82f6',
+    shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
