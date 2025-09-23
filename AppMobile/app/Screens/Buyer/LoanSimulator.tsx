@@ -72,6 +72,10 @@ export default function LoanSimulator() {
       case 3:
         return loanData.interestRate && loanData.loanTerm;
       case 4:
+        // If insurance is enabled, insurance amount must be provided
+        if (loanData.includeInsurance) {
+          return loanData.insuranceAmount && parseFloat(loanData.insuranceAmount) > 0;
+        }
         return true; // Insurance is optional
       case 5:
         return result !== null;
@@ -81,10 +85,16 @@ export default function LoanSimulator() {
   };
 
   const nextStep = () => {
-    if (validateStep(currentStep) && currentStep < 5) {
-      setCurrentStep(currentStep + 1);
+    if (currentStep < 5) {
       if (currentStep === 4) {
+        // When moving from insurance step to results, calculate loan first
         calculateLoan();
+        // Move to results step after calculation
+        setTimeout(() => {
+          setCurrentStep(currentStep + 1);
+        }, 100);
+      } else if (validateStep(currentStep)) {
+        setCurrentStep(currentStep + 1);
       }
     }
   };
@@ -602,36 +612,24 @@ export default function LoanSimulator() {
 
         {/* Continue Button */}
         <View style={styles.continueButtonContainer}>
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <TouchableOpacity 
               style={[
-                styles.continueButton, 
-                !validateStep(currentStep) && styles.continueButtonDisabled
-              ]} 
-              onPress={nextStep}
-              disabled={!validateStep(currentStep)}
-            >
-              <Text style={[
-                styles.continueButtonText,
-                !validateStep(currentStep) && styles.continueButtonTextDisabled
-              ]}>
-                Continue
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity 
-              style={[
-                styles.calculateButton, 
+                currentStep === 4 ? styles.calculateButton : styles.continueButton,
+                (!validateStep(currentStep) && currentStep !== 4) && styles.continueButtonDisabled,
                 isCalculating && styles.calculateButtonDisabled
               ]} 
-              onPress={calculateLoan}
-              disabled={isCalculating}
+              onPress={nextStep}
+              disabled={(!validateStep(currentStep) && currentStep !== 4) || isCalculating}
             >
-              <Text style={styles.calculateButtonText}>
-                {isCalculating ? 'Calculating...' : 'Calculate Loan'}
+              <Text style={[
+                currentStep === 4 ? styles.calculateButtonText : styles.continueButtonText,
+                (!validateStep(currentStep) && currentStep !== 4) && styles.continueButtonTextDisabled
+              ]}>
+                {currentStep === 4 ? (isCalculating ? 'Calculating...' : 'Calculate Loan') : 'Continue'}
               </Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
 
         {result && (
