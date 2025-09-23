@@ -9,7 +9,9 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Modal,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
 import BottomNavigation from '../../../components/BankAgent/BottomNavigation';
 
@@ -35,12 +37,17 @@ interface BankAgentStats {
 
 export default function BankAgentDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const { width, height } = Dimensions.get('window');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const floatAnim1 = useRef(new Animated.Value(0)).current;
   const floatAnim2 = useRef(new Animated.Value(0)).current;
   const floatAnim3 = useRef(new Animated.Value(0)).current;
+  
+  // Mock approval status - in real app this would come from backend
+  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [showApprovalModal, setShowApprovalModal] = useState(true);
 
   useEffect(() => {
     // Entrance animations
@@ -52,17 +59,17 @@ export default function BankAgentDashboard() {
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 800,
+        duration: 1000,
         useNativeDriver: true,
       }),
     ]).start();
 
     // Floating animations
-    const createFloatingAnimation = (animValue: Animated.Value, delay: number) => {
+    const createFloatingAnimation = (animValue: Animated.Value) => {
       return Animated.loop(
         Animated.sequence([
           Animated.timing(animValue, {
-            toValue: -20,
+            toValue: 1,
             duration: 3000,
             useNativeDriver: true,
           }),
@@ -71,15 +78,15 @@ export default function BankAgentDashboard() {
             duration: 3000,
             useNativeDriver: true,
           }),
-        ]),
-        { iterations: -1 }
+        ])
       );
     };
 
-    setTimeout(() => createFloatingAnimation(floatAnim1, 0).start(), 500);
-    setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
-    setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
+    createFloatingAnimation(floatAnim1).start();
+    setTimeout(() => createFloatingAnimation(floatAnim2).start(), 1000);
+    setTimeout(() => createFloatingAnimation(floatAnim3).start(), 2000);
   }, []);
+
   const [stats] = useState<BankAgentStats>({
     totalApplications: 24,
     pendingApplications: 8,
@@ -308,10 +315,7 @@ export default function BankAgentDashboard() {
           ]}
         >
           <View style={styles.headerContent}>
-            <View style={styles.bankIconContainer}>
-              <Text style={styles.bankIcon}>🏦</Text>
-            </View>
-            <View style={styles.headerText}>
+            <View>
               <Text style={styles.greeting}>Welcome back!</Text>
               <Text style={styles.userName}>{user?.display_name || 'Bank Agent'}</Text>
               <Text style={styles.subtitle}>Ready to review applications</Text>
@@ -340,36 +344,83 @@ export default function BankAgentDashboard() {
           </View>
         </Animated.View>
 
-        {/* Recent Applications */}
-        <Animated.View 
-          style={[
-            styles.applicationsSection,
-            {
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          <Text style={styles.sectionTitle}>Recent Applications</Text>
-          <View style={styles.applicationsList}>
-            {applications.map((application, index) => (
-              <Animated.View
-                key={application.id}
-                style={{
-                  opacity: fadeAnim,
-                  transform: [{
-                    translateY: Animated.add(
-                      slideAnim,
-                      new Animated.Value(index * 10)
-                    )
-                  }]
-                }}
-              >
-                {renderApplicationCard(application)}
-              </Animated.View>
-            ))}
-          </View>
-        </Animated.View>
       </Animated.ScrollView>
+
+      {/* Approval Status Modal */}
+      <Modal
+        visible={showApprovalModal && approvalStatus === 'pending'}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowApprovalModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalIcon}>⏳</Text>
+              <Text style={styles.modalTitle}>Account Under Review</Text>
+            </View>
+            
+            <View style={styles.modalContent}>
+              <Text style={styles.modalDescription}>
+                Your bank agent registration is currently being reviewed by our admin team.
+              </Text>
+              
+              <View style={styles.statusContainer}>
+                <View style={styles.statusItem}>
+                  <Text style={styles.modalStatusIcon}>✅</Text>
+                  <Text style={styles.statusText}>Registration Submitted</Text>
+                </View>
+                <View style={styles.statusItem}>
+                  <Text style={styles.modalStatusIcon}>⏳</Text>
+                  <Text style={styles.statusText}>Under Admin Review</Text>
+                </View>
+                <View style={[styles.statusItem, styles.pendingStatus]}>
+                  <Text style={styles.modalStatusIcon}>⭐</Text>
+                  <Text style={styles.statusText}>Approval Pending</Text>
+                </View>
+              </View>
+              
+              <View style={styles.limitationsContainer}>
+                <Text style={styles.limitationsTitle}>Current Limitations:</Text>
+                <Text style={styles.limitationItem}>• Cannot process loan applications</Text>
+                <Text style={styles.limitationItem}>• Limited access to client data</Text>
+                <Text style={styles.limitationItem}>• Cannot approve/reject loans</Text>
+              </View>
+              
+              <Text style={styles.modalNote}>
+                You will receive a notification once your account is approved. 
+                This typically takes 2-3 business days.
+              </Text>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => setShowApprovalModal(false)}
+              >
+                <Text style={styles.modalButtonText}>I Understand</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Overlay for pending approval state */}
+      {approvalStatus === 'pending' && !showApprovalModal && (
+        <View style={styles.pendingOverlay}>
+          <TouchableOpacity 
+            style={styles.pendingBanner}
+            onPress={() => setShowApprovalModal(true)}
+          >
+            <Text style={styles.pendingBannerIcon}>⏳</Text>
+            <View style={styles.pendingBannerContent}>
+              <Text style={styles.pendingBannerTitle}>Account Pending Approval</Text>
+              <Text style={styles.pendingBannerSubtitle}>Tap for details</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <BottomNavigation />
     </View>
   );
@@ -379,6 +430,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1e293b',
+    paddingBottom: 80,
   },
   floatingElement: {
     position: 'absolute',
@@ -659,5 +711,150 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 0,
+    maxWidth: 400,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    paddingTop: 30,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  modalIcon: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    textAlign: 'center',
+  },
+  modalContent: {
+    padding: 24,
+  },
+  modalDescription: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  statusContainer: {
+    marginBottom: 24,
+  },
+  statusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  pendingStatus: {
+    backgroundColor: '#fef3c7',
+  },
+  modalStatusIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  limitationsContainer: {
+    backgroundColor: '#fef2f2',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  limitationsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#dc2626',
+    marginBottom: 8,
+  },
+  limitationItem: {
+    fontSize: 14,
+    color: '#dc2626',
+    marginBottom: 4,
+  },
+  modalNote: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  modalActions: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  modalButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Pending overlay styles
+  pendingOverlay: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  pendingBanner: {
+    backgroundColor: '#fbbf24',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  pendingBannerIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  pendingBannerContent: {
+    flex: 1,
+  },
+  pendingBannerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#92400e',
+  },
+  pendingBannerSubtitle: {
+    fontSize: 12,
+    color: '#92400e',
+    opacity: 0.8,
   },
 });

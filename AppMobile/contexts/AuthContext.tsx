@@ -87,7 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         router.replace('/Screens/Buyer/Dashboard');
         break;
       case 'seller':
-        router.replace('/Screens/Seller/Dashboard');
+        // Seller dashboard doesn't exist yet, redirect to home for now
+        router.replace('/Screens/home');
         break;
       case 'bank_agent':
         router.replace('/Screens/BankAgent/LoanReviewDashboard');
