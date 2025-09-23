@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
-import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
+import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface LoanApplication {
   id: string;
@@ -191,7 +191,7 @@ export default function LoanStatus() {
         </ScrollView>
       )}
 
-      <BuyerBottomNav />
+      <BuyerBottomNavigation />
     </View>
   );
 }

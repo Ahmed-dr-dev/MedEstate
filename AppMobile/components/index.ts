@@ -1,3 +1,3 @@
 export { NavigationHeader } from './NavigationHeader';
-export { BuyerBottomNav } from './Buyer/BuyerBottomNav';
+export { default as BuyerBottomNavigation } from './Buyer/BottomNavigation';
 export { ProtectedRoute } from './ProtectedRoute';

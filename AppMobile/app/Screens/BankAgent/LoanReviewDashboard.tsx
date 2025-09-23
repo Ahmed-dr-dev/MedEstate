@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
+  StatusBar,
+  Dimensions,
+  ScrollView,
+  Animated,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useAuth } from '../../../contexts/AuthContext';
+import BottomNavigation from '../../../components/BankAgent/BottomNavigation';
+
+const { width, height } = Dimensions.get('window');
 
 interface LoanApplication {
   id: string;
@@ -22,22 +30,107 @@ interface LoanApplication {
 }
 
 export default function LoanReviewDashboard() {
+  const { user } = useAuth();
   const [applications, setApplications] = useState<LoanApplication[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [stats, setStats] = useState({
-    totalApplications: 0,
-    pendingReview: 0,
-    approved: 0,
-    rejected: 0,
+    totalApplications: 24,
+    pendingReview: 8,
+    approved: 12,
+    rejected: 4,
   });
 
+  // Animation values
+  const floatingAnimation1 = useRef(new Animated.Value(0)).current;
+  const floatingAnimation2 = useRef(new Animated.Value(0)).current;
+  const floatingAnimation3 = useRef(new Animated.Value(0)).current;
+  const fadeInAnimation = useRef(new Animated.Value(0)).current;
+  const slideInAnimation = useRef(new Animated.Value(50)).current;
+
   const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'pending', label: 'Pending' },
-    { id: 'under_review', label: 'Under Review' },
-    { id: 'high_priority', label: 'High Priority' },
+    { id: 'all', label: 'All', count: stats.totalApplications },
+    { id: 'pending', label: 'Pending', count: stats.pendingReview },
+    { id: 'under_review', label: 'Under Review', count: 6 },
+    { id: 'high_priority', label: 'High Priority', count: 3 },
   ];
+
+  useEffect(() => {
+    // Mock data for demonstration
+    const mockApplications: LoanApplication[] = [
+      {
+        id: '1',
+        applicantName: 'Dr. Sarah Johnson',
+        propertyTitle: 'Modern Medical Office Complex',
+        loanAmount: 850000,
+        status: 'pending',
+        submittedDate: '2024-01-20',
+        creditScore: 780,
+        annualIncome: 250000,
+        priority: 'high',
+      },
+      {
+        id: '2',
+        applicantName: 'Michael Chen',
+        propertyTitle: 'Downtown Clinic Space',
+        loanAmount: 650000,
+        status: 'under_review',
+        submittedDate: '2024-01-18',
+        creditScore: 720,
+        annualIncome: 180000,
+        priority: 'medium',
+      },
+      {
+        id: '3',
+        applicantName: 'Dr. Emily Rodriguez',
+        propertyTitle: 'Pediatric Care Center',
+        loanAmount: 920000,
+        status: 'pending',
+        submittedDate: '2024-01-15',
+        creditScore: 810,
+        annualIncome: 320000,
+        priority: 'high',
+      },
+    ];
+    setApplications(mockApplications);
+
+    // Start animations
+    const createFloatingAnimation = (animatedValue: Animated.Value, duration: number, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animatedValue, {
+            toValue: 1,
+            duration: duration,
+            delay: delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animatedValue, {
+            toValue: 0,
+            duration: duration,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    createFloatingAnimation(floatingAnimation1, 4000, 0).start();
+    createFloatingAnimation(floatingAnimation2, 3500, 1000).start();
+    createFloatingAnimation(floatingAnimation3, 4500, 2000).start();
+
+    // Fade in animation
+    Animated.parallel([
+      Animated.timing(fadeInAnimation, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideInAnimation, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -76,6 +169,7 @@ export default function LoanReviewDashboard() {
     <TouchableOpacity
       style={styles.applicationCard}
       onPress={() => handleReviewApplication(item.id)}
+      activeOpacity={0.8}
     >
       <View style={styles.applicationHeader}>
         <View style={styles.applicationInfo}>
@@ -135,77 +229,233 @@ export default function LoanReviewDashboard() {
     </View>
   );
 
+  const filteredApplications = applications.filter(app => {
+    const matchesSearch = app.applicantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         app.propertyTitle.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (selectedFilter === 'all') return matchesSearch;
+    if (selectedFilter === 'high_priority') return matchesSearch && app.priority === 'high';
+    return matchesSearch && app.status === selectedFilter;
+  });
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Loan Review Dashboard</Text>
-        <Text style={styles.subtitle}>Review and manage loan applications</Text>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Background Gradient Effect */}
+      <View style={styles.backgroundGradient}>
+        <View style={styles.gradientLayer1} />
+        <View style={styles.gradientLayer2} />
+        <View style={styles.gradientLayer3} />
       </View>
 
-      {/* Stats Cards */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.totalApplications}</Text>
-          <Text style={styles.statTitle}>Total</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#f59e0b' }]}>{stats.pendingReview}</Text>
-          <Text style={styles.statTitle}>Pending</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#10b981' }]}>{stats.approved}</Text>
-          <Text style={styles.statTitle}>Approved</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#ef4444' }]}>{stats.rejected}</Text>
-          <Text style={styles.statTitle}>Rejected</Text>
-        </View>
-      </View>
-
-      {/* Search */}
-      <View style={styles.searchSection}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search applications..."
-          placeholderTextColor="rgba(255, 255, 255, 0.5)"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+      {/* Floating Elements */}
+      <View style={styles.floatingElements}>
+        <Animated.View 
+          style={[
+            styles.floatingCircle, 
+            styles.circle1,
+            {
+              transform: [{
+                translateY: floatingAnimation1.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -20],
+                })
+              }]
+            }
+          ]} 
+        />
+        <Animated.View 
+          style={[
+            styles.floatingCircle, 
+            styles.circle2,
+            {
+              transform: [{
+                translateY: floatingAnimation2.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 15],
+                })
+              }]
+            }
+          ]} 
+        />
+        <Animated.View 
+          style={[
+            styles.floatingSquare, 
+            styles.square1,
+            {
+              transform: [{
+                rotate: floatingAnimation3.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['45deg', '90deg'],
+                })
+              }]
+            }
+          ]} 
         />
       </View>
 
-      {/* Filters */}
-      <View style={styles.filtersContainer}>
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter.id}
-            style={[
-              styles.filterButton,
-              selectedFilter === filter.id && styles.activeFilterButton
-            ]}
-            onPress={() => setSelectedFilter(filter.id)}
-          >
-            <Text style={[
-              styles.filterButtonText,
-              selectedFilter === filter.id && styles.activeFilterButtonText
-            ]}>
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Animated.ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <Animated.View 
+          style={[
+            styles.content,
+            {
+              opacity: fadeInAnimation,
+              transform: [{ translateY: slideInAnimation }]
+            }
+          ]}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <View style={styles.welcomeSection}>
+                <Text style={styles.welcomeText}>Welcome back,</Text>
+                <Text style={styles.agentName}>{user?.display_name || 'Bank Agent'}</Text>
+              </View>
+              <View style={styles.headerIcon}>
+                <Text style={styles.headerIconText}>🏦</Text>
+              </View>
+            </View>
+            <Text style={styles.subtitle}>Review and manage loan applications</Text>
+          </View>
 
-      {/* Applications List */}
-      {applications.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <FlatList
-          data={applications}
-          renderItem={renderApplication}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.applicationsList}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+          {/* Stats Cards */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <View style={styles.statIconContainer}>
+                <Text style={styles.statIcon}>📊</Text>
+              </View>
+              <View style={styles.statContent}>
+                <Text style={styles.statNumber}>{stats.totalApplications}</Text>
+                <Text style={styles.statTitle}>Total Applications</Text>
+                <Text style={styles.statSubtitle}>This month</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.pendingCard]}>
+              <View style={styles.statIconContainer}>
+                <Text style={styles.statIcon}>⏳</Text>
+              </View>
+              <View style={styles.statContent}>
+                <Text style={[styles.statNumber, { color: '#f59e0b' }]}>{stats.pendingReview}</Text>
+                <Text style={styles.statTitle}>Pending Review</Text>
+                <Text style={styles.statSubtitle}>Needs attention</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.approvedCard]}>
+              <View style={styles.statIconContainer}>
+                <Text style={styles.statIcon}>✅</Text>
+              </View>
+              <View style={styles.statContent}>
+                <Text style={[styles.statNumber, { color: '#10b981' }]}>{stats.approved}</Text>
+                <Text style={styles.statTitle}>Approved</Text>
+                <Text style={styles.statSubtitle}>This month</Text>
+              </View>
+            </View>
+            
+            <View style={[styles.statCard, styles.rejectedCard]}>
+              <View style={styles.statIconContainer}>
+                <Text style={styles.statIcon}>❌</Text>
+              </View>
+              <View style={styles.statContent}>
+                <Text style={[styles.statNumber, { color: '#ef4444' }]}>{stats.rejected}</Text>
+                <Text style={styles.statTitle}>Rejected</Text>
+                <Text style={styles.statSubtitle}>This month</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Search */}
+          <View style={styles.searchSection}>
+            <View style={styles.searchContainer}>
+              <View style={styles.searchIcon}>
+                <Text style={styles.searchIconText}>🔍</Text>
+              </View>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search applications..."
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+          </View>
+
+          {/* Filters */}
+          <View style={styles.filtersContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {filters.map((filter) => (
+                <TouchableOpacity
+                  key={filter.id}
+                  style={[
+                    styles.filterButton,
+                    selectedFilter === filter.id && styles.activeFilterButton
+                  ]}
+                  onPress={() => setSelectedFilter(filter.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.filterButtonText,
+                    selectedFilter === filter.id && styles.activeFilterButtonText
+                  ]}>
+                    {filter.label}
+                  </Text>
+                  <View style={[
+                    styles.filterBadge,
+                    selectedFilter === filter.id && styles.activeFilterBadge
+                  ]}>
+                    <Text style={[
+                      styles.filterBadgeText,
+                      selectedFilter === filter.id && styles.activeFilterBadgeText
+                    ]}>
+                      {filter.count}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Applications List */}
+          <View style={styles.applicationsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Applications</Text>
+              <Text style={styles.sectionCount}>{filteredApplications.length} items</Text>
+            </View>
+            
+            {filteredApplications.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <View style={styles.applicationsList}>
+                {filteredApplications.map((item, index) => (
+                  <Animated.View
+                    key={item.id}
+                    style={[
+                      {
+                        opacity: fadeInAnimation,
+                        transform: [{
+                          translateY: slideInAnimation.interpolate({
+                            inputRange: [0, 50],
+                            outputRange: [0, 50 + (index * 10)],
+                          })
+                        }]
+                      }
+                    ]}
+                  >
+                    {renderApplication({ item })}
+                  </Animated.View>
+                ))}
+              </View>
+            )}
+          </View>
+        </Animated.View>
+      </Animated.ScrollView>
+      <BottomNavigation />
     </View>
   );
 }
@@ -215,71 +465,231 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f172a',
   },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  // Background gradient styles
+  backgroundGradient: {
+    position: 'absolute',
+    width: width,
+    height: height,
   },
-  title: {
+  gradientLayer1: {
+    position: 'absolute',
+    width: width * 1.5,
+    height: height * 0.6,
+    backgroundColor: '#1e40af',
+    borderRadius: width,
+    top: -height * 0.2,
+    left: -width * 0.25,
+    opacity: 0.8,
+  },
+  gradientLayer2: {
+    position: 'absolute',
+    width: width * 1.2,
+    height: height * 0.5,
+    backgroundColor: '#3b82f6',
+    borderRadius: width,
+    top: -height * 0.1,
+    right: -width * 0.1,
+    opacity: 0.6,
+  },
+  gradientLayer3: {
+    position: 'absolute',
+    width: width,
+    height: height * 0.4,
+    backgroundColor: '#60a5fa',
+    borderRadius: width,
+    bottom: -height * 0.2,
+    left: -width * 0.2,
+    opacity: 0.4,
+  },
+  // Floating elements
+  floatingElements: {
+    position: 'absolute',
+    width: width,
+    height: height,
+  },
+  floatingCircle: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 50,
+  },
+  circle1: {
+    width: 80,
+    height: 80,
+    top: height * 0.15,
+    right: width * 0.1,
+  },
+  circle2: {
+    width: 60,
+    height: 60,
+    top: height * 0.4,
+    left: width * 0.05,
+  },
+  floatingSquare: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 8,
+  },
+  square1: {
+    width: 30,
+    height: 30,
+    top: height * 0.25,
+    left: width * 0.15,
+  },
+  // Scroll view styles
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
+    paddingTop: 60,
+  },
+  // Header styles
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  welcomeSection: {
+    flex: 1,
+  },
+  welcomeText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 4,
+  },
+  agentName: {
     fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
     letterSpacing: -0.5,
-    marginBottom: 4,
+  },
+  headerIcon: {
+    width: 50,
+    height: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  headerIconText: {
+    fontSize: 24,
   },
   subtitle: {
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.7)',
   },
+  // Stats container
   statsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 30,
   },
   statCard: {
-    flex: 1,
+    width: (width - 60) / 2,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
-    alignItems: 'center',
+    borderRadius: 16,
+    padding: 20,
+    margin: 5,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  pendingCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  approvedCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+  },
+  rejectedCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statIcon: {
+    fontSize: 20,
+  },
+  statContent: {
+    flex: 1,
   },
   statNumber: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#60a5fa',
     marginBottom: 4,
   },
   statTitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
+    fontSize: 14,
+    color: 'white',
+    fontWeight: '600',
+    marginBottom: 2,
   },
+  statSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  // Search styles
   searchSection: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
-  searchInput: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 16,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchIconText: {
+    fontSize: 16,
+    opacity: 0.7,
+  },
+  searchInput: {
+    flex: 1,
     paddingVertical: 16,
     fontSize: 16,
     color: 'white',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
+  // Filter styles
   filtersContainer: {
-    flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 30,
   },
   filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
     marginRight: 12,
     borderWidth: 1,
@@ -293,12 +703,52 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 14,
     fontWeight: '500',
+    marginRight: 8,
   },
   activeFilterButtonText: {
     color: 'white',
   },
-  applicationsList: {
+  filterBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  activeFilterBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  filterBadgeText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  activeFilterBadgeText: {
+    color: 'white',
+  },
+  // Applications section
+  applicationsSection: {
     paddingHorizontal: 20,
+    flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: 'white',
+  },
+  sectionCount: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  applicationsList: {
+    flex: 1,
   },
   applicationCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -307,6 +757,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   applicationHeader: {
     flexDirection: 'row',
@@ -382,6 +837,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
+    paddingVertical: 60,
   },
   emptyIcon: {
     fontSize: 64,

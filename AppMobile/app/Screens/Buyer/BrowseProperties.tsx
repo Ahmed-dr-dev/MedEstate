@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   StatusBar,
   TextInput,
   Dimensions,
+  Animated,
 } from 'react-native';
-import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
+import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +30,52 @@ interface Property {
 export default function BrowseProperties() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+  const floatAnim3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Floating animations
+    const createFloatingAnimation = (animValue: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: -20,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+        ]),
+        { iterations: -1 }
+      );
+    };
+
+    setTimeout(() => createFloatingAnimation(floatAnim1, 0).start(), 500);
+    setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
+    setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
+  }, []);
   const [properties, setProperties] = useState<Property[]>([
     {
       id: '1',
@@ -183,18 +230,65 @@ export default function BrowseProperties() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       
-      <ScrollView 
-        style={styles.scrollView} 
+      {/* Floating Background Elements */}
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle1,
+          {
+            top: 100,
+            right: -40,
+            transform: [{ translateY: floatAnim1 }],
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.square1,
+          {
+            top: 300,
+            left: -30,
+            transform: [{ translateY: floatAnim2 }],
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle2,
+          {
+            bottom: 200,
+            right: -30,
+            transform: [{ translateY: floatAnim3 }],
+          }
+        ]} 
+      />
+      
+      <Animated.ScrollView 
+        style={[
+          styles.scrollView,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Find Your Home 🏠</Text>
-            <Text style={styles.userName}>Browse Properties</Text>
+          <View style={styles.headerContent}>
+            <View style={styles.searchIconContainer}>
+              <Text style={styles.searchHeaderIcon}>🔍</Text>
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting}>Find Your Home 🏠</Text>
+              <Text style={styles.userName}>Browse Properties</Text>
+              <Text style={styles.subtitle}>Discover your perfect property</Text>
+            </View>
           </View>
           <TouchableOpacity style={styles.filterButton}>
             <Text style={styles.filterIcon}>⚙️</Text>
@@ -258,9 +352,9 @@ export default function BrowseProperties() {
             {filteredProperties.map(renderPropertyCard)}
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
-      <BuyerBottomNav />
+      <BuyerBottomNavigation />
     </View>
   );
 }
@@ -268,7 +362,29 @@ export default function BrowseProperties() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1e293b',
+  },
+  floatingElement: {
+    position: 'absolute',
+    opacity: 0.1,
+  },
+  circle1: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#3b82f6',
+  },
+  square1: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#8b5cf6',
+    transform: [{ rotate: '45deg' }],
+  },
+  circle2: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#06b6d4',
   },
   scrollView: {
     flex: 1,
@@ -277,31 +393,59 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: 'white',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  searchIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  searchHeaderIcon: {
+    fontSize: 28,
+  },
+  headerText: {
+    flex: 1,
   },
   greeting: {
     fontSize: 16,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: 'white',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   filterButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   filterIcon: {
     fontSize: 20,
@@ -309,31 +453,29 @@ const styles = StyleSheet.create({
   searchSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'white',
     marginBottom: 12,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   searchIcon: {
     fontSize: 18,
     marginRight: 12,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1e293b',
+    color: 'white',
   },
   filtersSection: {
-    backgroundColor: 'white',
     paddingVertical: 16,
     marginBottom: 12,
   },
@@ -344,10 +486,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   activeFilterChip: {
     backgroundColor: '#3b82f6',
@@ -356,7 +498,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   activeFilterChipText: {
     color: 'white',
@@ -364,7 +506,6 @@ const styles = StyleSheet.create({
   resultsSection: {
     paddingHorizontal: 20,
     paddingVertical: 24,
-    backgroundColor: 'white',
     marginBottom: 12,
   },
   resultsHeader: {
@@ -376,30 +517,35 @@ const styles = StyleSheet.create({
   resultsCount: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: 'white',
   },
   sortButton: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   sortButtonText: {
     fontSize: 12,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   propertiesGrid: {
     gap: 16,
   },
   propertyCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   propertyImageSection: {
     position: 'relative',
@@ -410,10 +556,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 12,
-    backgroundColor: '#dbeafe',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   propertyImage: {
     fontSize: 32,
@@ -456,22 +604,22 @@ const styles = StyleSheet.create({
   propertyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 4,
   },
   propertyLocation: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 8,
   },
   propertySize: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 12,
   },
   propertyDescription: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -481,16 +629,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   featureTag: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   featureText: {
     fontSize: 12,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   propertyFooter: {
@@ -499,9 +647,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: 16,
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   priceSection: {
     flex: 1,
@@ -513,7 +661,7 @@ const styles = StyleSheet.create({
   },
   pricePerSqft: {
     fontSize: 12,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginTop: 2,
   },
   viewButton: {

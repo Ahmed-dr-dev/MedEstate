@@ -42,12 +42,32 @@ export default function RootLayout() {
           options={{ title: 'Favorites' }}
         />
         <Stack.Screen 
+          name="Screens/Buyer/Profile" 
+          options={{ title: 'Buyer Profile' }}
+        />
+        <Stack.Screen 
           name="Screens/Buyer/LoanApplication" 
           options={{ title: 'Loan Application' }}
         />
         <Stack.Screen 
           name="Screens/Buyer/LoanStatus" 
           options={{ title: 'Loan Status' }}
+        />
+        <Stack.Screen 
+          name="Screens/Buyer/LoanApplicationResults" 
+          options={{ title: 'Loan Application Results' }}
+        />
+        <Stack.Screen 
+          name="Screens/Buyer/LoanSimulator" 
+          options={{ title: 'Loan Simulator' }}
+        />
+        <Stack.Screen 
+          name="Screens/Buyer/NewLoanApplication" 
+          options={{ title: 'New Loan Application' }}
+        />
+        <Stack.Screen 
+          name="Screens/Buyer/AddProperty" 
+          options={{ title: 'Add Property' }}
         />
         
         {/* Seller Screens */}
@@ -66,12 +86,20 @@ export default function RootLayout() {
         
         {/* Bank Agent Screens */}
         <Stack.Screen 
+          name="Screens/BankAgent/Dashboard" 
+          options={{ title: 'Bank Agent Dashboard' }}
+        />
+        <Stack.Screen 
           name="Screens/BankAgent/LoanReviewDashboard" 
           options={{ title: 'Loan Review Dashboard' }}
         />
         <Stack.Screen 
           name="Screens/BankAgent/LoanDetails" 
           options={{ title: 'Loan Details' }}
+        />
+        <Stack.Screen 
+          name="Screens/BankAgent/Profile" 
+          options={{ title: 'Bank Agent Profile' }}
         />
       </Stack>
     </AuthProvider>

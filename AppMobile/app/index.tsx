@@ -24,6 +24,7 @@ export default function Index() {
         <View style={[styles.floatingSquare, styles.square1]} />
         <View style={[styles.floatingSquare, styles.square2]} />
       </View>
+      
 
       <View style={styles.safeArea}>
         <View style={styles.content}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
-import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
+import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +31,51 @@ interface MarketTrend {
 
 export default function BuyerDashboard() {
   const { user } = useAuth();
+  const { width, height } = Dimensions.get('window');
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+  const floatAnim3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Floating animations
+    const createFloatingAnimation = (animValue: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: -20,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+        ]),
+        { iterations: -1 }
+      );
+    };
+
+    setTimeout(() => createFloatingAnimation(floatAnim1, 0).start(), 500);
+    setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
+    setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
+  }, []);
   const [stats] = useState<DashboardStats>({
     savedProperties: 12,
     loanApplications: 3,
@@ -90,42 +135,104 @@ export default function BuyerDashboard() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <ScrollView 
-        style={styles.scrollView} 
+      {/* Animated Background Elements */}
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle1,
+          {
+            transform: [{ translateY: floatAnim1 }],
+            left: width * 0.1,
+            top: height * 0.15,
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.square1,
+          {
+            transform: [{ translateY: floatAnim2 }],
+            right: width * 0.15,
+            top: height * 0.25,
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle2,
+          {
+            transform: [{ translateY: floatAnim3 }],
+            left: width * 0.7,
+            bottom: height * 0.3,
+          }
+        ]} 
+      />
+      
+      <Animated.ScrollView 
+        style={[styles.scrollView, { opacity: fadeAnim }]} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Welcome back! 👋</Text>
-            <Text style={styles.userName}>{user?.display_name || 'Buyer'}</Text>
+        <Animated.View 
+          style={[
+            styles.header,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.buyerIconContainer}>
+              <Text style={styles.buyerIcon}>🏠</Text>
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting}>Welcome back!</Text>
+              <Text style={styles.userName}>{user?.display_name || 'Buyer'}</Text>
+              <Text style={styles.subtitle}>Find your dream home</Text>
+            </View>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.searchButton}>
+            <TouchableOpacity style={styles.searchButton} activeOpacity={0.8}>
               <Text style={styles.searchIcon}>🔍</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton}>
+            <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
               <Text style={styles.notificationIcon}>🔔</Text>
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>3</Text>
               </View>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Market Overview */}
-        <View style={styles.marketSection}>
+        <Animated.View 
+          style={[
+            styles.marketSection,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Market Overview</Text>
           <View style={styles.trendsContainer}>
             {marketTrends.map(renderMarketTrend)}
           </View>
-        </View>
+        </Animated.View>
 
         {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
+        <Animated.View 
+          style={[
+            styles.quickActionsSection,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
             <TouchableOpacity 
@@ -172,20 +279,27 @@ export default function BuyerDashboard() {
               <Text style={styles.quickActionSubtitle}>Submit application</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Stats Overview */}
-        <View style={styles.statsSection}>
+        <Animated.View 
+          style={[
+            styles.statsSection,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Your Activity</Text>
           <View style={styles.statsContainer}>
             {renderStatCard('Saved Properties', stats.savedProperties, '❤️', '#ef4444', 'Properties you\'ve favorited')}
             {renderStatCard('Loan Applications', stats.loanApplications, '💰', '#10b981', 'Applications submitted')}
             {renderStatCard('Scheduled Visits', stats.scheduledVisits, '📅', '#f59e0b', 'Property visits planned')}
           </View>
-        </View>
-      </ScrollView>
+        </Animated.View>
+      </Animated.ScrollView>
 
-      <BuyerBottomNav />
+      <BuyerBottomNavigation />
     </View>
   );
 }
@@ -193,7 +307,29 @@ export default function BuyerDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1e293b',
+  },
+  floatingElement: {
+    position: 'absolute',
+    opacity: 0.1,
+  },
+  circle1: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#3b82f6',
+  },
+  square1: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#8b5cf6',
+    transform: [{ rotate: '45deg' }],
+  },
+  circle2: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#06b6d4',
   },
   scrollView: {
     flex: 1,
@@ -202,23 +338,49 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: 'white',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  buyerIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  buyerIcon: {
+    fontSize: 28,
+  },
+  headerText: {
+    flex: 1,
   },
   greeting: {
     fontSize: 16,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: 'white',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   headerActions: {
     flexDirection: 'row',
@@ -228,9 +390,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   searchIcon: {
     fontSize: 20,
@@ -239,10 +403,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   notificationIcon: {
     fontSize: 20,
@@ -272,14 +438,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   trendCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   trendHeader: {
     flexDirection: 'row',
@@ -289,7 +457,7 @@ const styles = StyleSheet.create({
   },
   trendTitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   trendIndicator: {
@@ -304,7 +472,7 @@ const styles = StyleSheet.create({
   trendValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: 'white',
   },
   // Quick Actions
   quickActionsSection: {
@@ -314,7 +482,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 16,
   },
   quickActionsGrid: {
@@ -323,25 +491,29 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   quickActionCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     width: (width - 52) / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   quickActionIconContainer: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   quickActionIcon: {
     fontSize: 24,
@@ -349,13 +521,13 @@ const styles = StyleSheet.create({
   quickActionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 4,
     textAlign: 'center',
   },
   quickActionSubtitle: {
     fontSize: 12,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
   },
   // Stats Section
@@ -367,15 +539,17 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   statCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 20,
     borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   statHeader: {
     flexDirection: 'row',
@@ -387,7 +561,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -400,13 +574,13 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 16,
-    color: '#1e293b',
+    color: 'white',
     fontWeight: '600',
     marginBottom: 4,
   },
   statDescription: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     lineHeight: 20,
   },
 });

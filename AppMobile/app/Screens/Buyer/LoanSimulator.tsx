@@ -9,7 +9,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
+import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface LoanSimulatorState {
   propertyValue: string;
@@ -571,7 +571,7 @@ export default function LoanSimulator() {
 
       </ScrollView>
 
-      <BuyerBottomNav />
+      <BuyerBottomNavigation />
     </View>
   );
 }

@@ -13,7 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
+import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface PropertyFormData {
   title: string;
@@ -300,7 +300,7 @@ export default function AddProperty() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <BuyerBottomNav />
+      <BuyerBottomNavigation />
     </View>
   );
 }

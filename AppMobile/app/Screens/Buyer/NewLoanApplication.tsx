@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
+import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface Bank {
   id: string;
@@ -413,7 +413,7 @@ export default function NewLoanApplication() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.headerBackButton} onPress={() => router.back()}>
             <Text style={styles.backButtonIcon}>←</Text>
           </TouchableOpacity>
           <View style={styles.headerContent}>
@@ -567,7 +567,7 @@ export default function NewLoanApplication() {
         )}
       </ScrollView>
 
-      <BuyerBottomNav />
+      <BuyerBottomNavigation />
     </View>
   );
 }
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     backgroundColor: '#f0f9ff',
   },
-  backButton: {
+  headerBackButton: {
     width: 44,
     height: 44,
     borderRadius: 22,

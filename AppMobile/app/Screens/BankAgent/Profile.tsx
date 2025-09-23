@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,11 @@ import {
   StatusBar,
   TextInput,
   Alert,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
+import BottomNavigation from '../../../components/BankAgent/BottomNavigation';
 
 interface BankAgentProfile {
   bankName: string;
@@ -25,6 +28,51 @@ interface BankAgentProfile {
 
 export default function BankAgentProfile() {
   const { user, signOut } = useAuth();
+  const { width, height } = Dimensions.get('window');
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+  const floatAnim3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Floating animations
+    const createFloatingAnimation = (animValue: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: -20,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+        ]),
+        { iterations: -1 }
+      );
+    };
+
+    setTimeout(() => createFloatingAnimation(floatAnim1, 0).start(), 500);
+    setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
+    setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
+  }, []);
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState<BankAgentProfile>({
     bankName: 'First National Bank',
@@ -98,29 +146,84 @@ export default function BankAgentProfile() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <ScrollView 
-        style={styles.scrollView} 
+      {/* Animated Background Elements */}
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle1,
+          {
+            transform: [{ translateY: floatAnim1 }],
+            left: width * 0.1,
+            top: height * 0.15,
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.square1,
+          {
+            transform: [{ translateY: floatAnim2 }],
+            right: width * 0.15,
+            top: height * 0.25,
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle2,
+          {
+            transform: [{ translateY: floatAnim3 }],
+            left: width * 0.7,
+            bottom: height * 0.3,
+          }
+        ]} 
+      />
+      
+      <Animated.ScrollView 
+        style={[styles.scrollView, { opacity: fadeAnim }]} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Bank Agent Profile 🏦</Text>
-            <Text style={styles.userName}>Manage Your Information</Text>
+        <Animated.View 
+          style={[
+            styles.header,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.bankIconContainer}>
+              <Text style={styles.bankIcon}>🏦</Text>
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting}>Bank Agent Profile</Text>
+              <Text style={styles.subtitle}>Manage Your Information</Text>
+            </View>
           </View>
           <TouchableOpacity 
             style={styles.editButton}
             onPress={() => setIsEditing(!isEditing)}
+            activeOpacity={0.8}
           >
             <Text style={styles.editButtonText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* Verification Status */}
-        <View style={styles.verificationCard}>
+        <Animated.View 
+          style={[
+            styles.verificationCard,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
           <View style={styles.verificationHeader}>
             <Text style={styles.verificationTitle}>Verification Status</Text>
             <View style={[
@@ -146,10 +249,17 @@ export default function BankAgentProfile() {
               : 'Your verification was rejected. Please contact support for more information.'
             }
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Profile Information */}
-        <View style={styles.profileCard}>
+        <Animated.View 
+          style={[
+            styles.profileCard,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Bank Information</Text>
           
           {renderProfileField('Bank Name', profile.bankName, 'bankName')}
@@ -159,19 +269,32 @@ export default function BankAgentProfile() {
           {renderProfileField('Phone', profile.phone, 'phone')}
           {renderProfileField('Branch Address', profile.branchAddress, 'branchAddress')}
           {renderProfileField('License Number', profile.licenseNumber, 'licenseNumber')}
-        </View>
+        </Animated.View>
 
         {/* Actions */}
         {isEditing && (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          </TouchableOpacity>
+          <Animated.View
+            style={{
+              transform: [{ translateY: slideAnim }],
+            }}
+          >
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile} activeOpacity={0.8}>
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </TouchableOpacity>
+          </Animated.View>
         )}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        <Animated.View
+          style={{
+            transform: [{ translateY: slideAnim }],
+          }}
+        >
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.ScrollView>
+      <BottomNavigation />
     </View>
   );
 }
@@ -179,7 +302,29 @@ export default function BankAgentProfile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1e293b',
+  },
+  floatingElement: {
+    position: 'absolute',
+    opacity: 0.1,
+  },
+  circle1: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#3b82f6',
+  },
+  square1: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#8b5cf6',
+    transform: [{ rotate: '45deg' }],
+  },
+  circle2: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#06b6d4',
   },
   scrollView: {
     flex: 1,
@@ -188,29 +333,57 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: 'white',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  bankIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  bankIcon: {
+    fontSize: 28,
+  },
+  headerText: {
+    flex: 1,
   },
   greeting: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 20,
+    color: 'white',
+    fontWeight: 'bold',
     marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: 'white',
   },
   editButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: 'rgba(59, 130, 246, 0.8)',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   editButtonText: {
     color: 'white',
@@ -218,16 +391,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   verificationCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   verificationHeader: {
     flexDirection: 'row',
@@ -238,7 +413,7 @@ const styles = StyleSheet.create({
   verificationTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: 'white',
   },
   verificationBadge: {
     flexDirection: 'row',
@@ -257,25 +432,27 @@ const styles = StyleSheet.create({
   },
   verificationDescription: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     lineHeight: 20,
   },
   profileCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 20,
   },
   fieldContainer: {
@@ -284,41 +461,43 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 8,
   },
   fieldValue: {
     fontSize: 16,
-    color: '#1e293b',
+    color: 'white',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   fieldInput: {
     fontSize: 16,
-    color: '#1e293b',
+    color: 'white',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#3b82f6',
   },
   saveButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.8)',
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   saveButtonText: {
     color: 'white',
@@ -326,17 +505,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   logoutButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.8)',
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     shadowColor: '#ef4444',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   logoutButtonText: {
     color: 'white',
