@@ -120,6 +120,10 @@ export default function NewLoanApplication() {
       case 3:
         return selectedBank !== null;
       case 4:
+        // If insurance is enabled, insurance amount must be provided
+        if (applicationForm.includeInsurance) {
+          return applicationForm.insuranceAmount && parseFloat(applicationForm.insuranceAmount) > 0;
+        }
         return true; // Insurance is optional
       case 5:
         return true;
@@ -129,8 +133,13 @@ export default function NewLoanApplication() {
   };
 
   const nextStep = () => {
-    if (validateStep(currentStep) && currentStep < 5) {
-      setCurrentStep(currentStep + 1);
+    if (currentStep < 5) {
+      if (currentStep === 4) {
+        // When moving from insurance step to review, allow proceeding without strict validation
+        setCurrentStep(currentStep + 1);
+      } else if (validateStep(currentStep)) {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -605,36 +614,25 @@ export default function NewLoanApplication() {
 
         {/* Continue Button */}
         <View style={styles.continueButtonContainer}>
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <TouchableOpacity 
               style={[
-                styles.continueButton, 
-                !validateStep(currentStep) && styles.continueButtonDisabled
-              ]} 
-              onPress={nextStep}
-              disabled={!validateStep(currentStep)}
-            >
-              <Text style={[
-                styles.continueButtonText,
-                !validateStep(currentStep) && styles.continueButtonTextDisabled
-              ]}>
-                Continue
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity 
-              style={[
-                styles.submitButton, 
+                currentStep === 4 ? styles.continueButton : 
+                currentStep === 5 ? styles.submitButton : styles.continueButton,
+                (!validateStep(currentStep) && currentStep < 4) && styles.continueButtonDisabled,
                 isSubmitting && styles.submitButtonDisabled
               ]} 
-              onPress={submitApplication}
-              disabled={isSubmitting}
+              onPress={currentStep === 5 ? submitApplication : nextStep}
+              disabled={(!validateStep(currentStep) && currentStep < 4) || isSubmitting}
             >
-              <Text style={styles.submitButtonText}>
-                {isSubmitting ? 'Submitting...' : 'Submit Application'}
+              <Text style={[
+                currentStep === 5 ? styles.submitButtonText : styles.continueButtonText,
+                (!validateStep(currentStep) && currentStep < 4) && styles.continueButtonTextDisabled
+              ]}>
+                {currentStep === 5 ? (isSubmitting ? 'Submitting...' : 'Submit Application') : 'Continue'}
               </Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
 
         {/* Bank Selection Modal */}
