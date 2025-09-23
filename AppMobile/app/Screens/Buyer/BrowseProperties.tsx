@@ -180,7 +180,7 @@ export default function BrowseProperties() {
 
   const handleView = (id: string) => {
     router.push({
-      pathname: '/Screens/Buyer/PropertyDetails/PropertyDetails',
+      pathname: '/Screens/Buyer/PropertyDetails',
       params: { id: id }
     });
   };
