@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 
 const BuyerBottomNavigation = () => {
@@ -32,7 +32,7 @@ const BuyerBottomNavigation = () => {
       label: 'Loans'
     },
     { 
-      name: 'Profile', 
+      name: 'Profile',  
       icon: '👤', 
       route: '/Screens/Buyer/Profile',
       label: 'Profile'
@@ -40,7 +40,7 @@ const BuyerBottomNavigation = () => {
   ];
 
   const handleNavigation = (route: string) => {
-    router.push(route as any);
+    router.replace(route as any);
   };
 
   return (
@@ -53,6 +53,7 @@ const BuyerBottomNavigation = () => {
               key={item.name}
               style={[styles.navItem, isActive && styles.activeNavItem]}
               onPress={() => handleNavigation(item.route)}
+              activeOpacity={0.9}
             >
               <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
                 <Text style={[styles.icon, isActive && styles.activeIcon]}>
@@ -80,52 +81,63 @@ const styles = StyleSheet.create({
   },
   navBar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(30, 41, 59, 0.95)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingBottom: 34, // Safe area padding for iOS
-    paddingTop: 12,
+    backgroundColor: 'rgba(28, 41, 72, 0.95)',
+    borderTopWidth: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24, 
+    paddingBottom: 5, // Safe area padding for iOS
+    paddingTop: 2,  
     paddingHorizontal: 8,
-    backdropFilter: 'blur(20px)',
+    marginHorizontal: 0,
+    marginBottom: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
+
   },
   activeNavItem: {
     // Active state styling handled by individual elements
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   activeIconContainer: {
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
+    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+    borderWidth: 2,
+    borderColor: 'rgba(59, 130, 246, 0.6)',
+    transform: [{ scale: 1.1 }],
   },
   icon: {
-    fontSize: 20,
-  },
-  activeIcon: {
     fontSize: 22,
   },
+  activeIcon: {
+    fontSize: 24,
+  },
   label: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
     textAlign: 'center',
+    marginTop: 2,
   },
   activeLabel: {
     color: '#3b82f6',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });
 

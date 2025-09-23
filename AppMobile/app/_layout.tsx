@@ -5,7 +5,15 @@ import { AuthProvider } from '../contexts/AuthContext';
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack 
+        screenOptions={{ 
+          headerShown: false,
+          animation: 'slide_from_right',
+          animationDuration: 300,
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+        }}
+      >
         <Stack.Screen name="index" />
         <Stack.Screen 
           name="Screens/signin" 
@@ -26,48 +34,12 @@ export default function RootLayout() {
         
         {/* Buyer Screens */}
         <Stack.Screen 
-          name="Screens/Buyer/Dashboard" 
-          options={{ title: 'Buyer Dashboard' }}
+          name="Screens/Buyer" 
+          options={{ headerShown: false }}
         />
         <Stack.Screen 
-          name="Screens/Buyer/BrowseProperties" 
-          options={{ title: 'Browse Properties' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/PropertyDetails" 
-          options={{ title: 'Property Details' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/Favorites" 
-          options={{ title: 'Favorites' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/Profile" 
-          options={{ title: 'Buyer Profile' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/LoanApplication" 
-          options={{ title: 'Loan Application' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/LoanStatus" 
-          options={{ title: 'Loan Status' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/LoanApplicationResults" 
-          options={{ title: 'Loan Application Results' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/LoanSimulator" 
-          options={{ title: 'Loan Simulator' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/NewLoanApplication" 
-          options={{ title: 'New Loan Application' }}
-        />
-        <Stack.Screen 
-          name="Screens/Buyer/AddProperty" 
-          options={{ title: 'Add Property' }}
+          name="Screens/PropertyDetails" 
+          options={{ headerShown: false }}
         />
         
         {/* Seller Screens */}

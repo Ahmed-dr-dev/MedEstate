@@ -9,13 +9,15 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface LoanSimulatorState {
   propertyValue: string;
   downPayment: string;
   interestRate: string;
   loanTerm: string;
+  includeInsurance: boolean;
+  insuranceType: string;
+  insuranceAmount: string;
 }
 
 interface SimulationResult {
@@ -24,6 +26,8 @@ interface SimulationResult {
   totalPayment: string;
   downPaymentPercent: string;
   loanToValue: string;
+  monthlyInsurance: string;
+  totalMonthlyPayment: string;
 }
 
 export default function LoanSimulator() {
@@ -32,7 +36,10 @@ export default function LoanSimulator() {
     propertyValue: '',
     downPayment: '',
     interestRate: '6.5',
-    loanTerm: '30'
+    loanTerm: '30',
+    includeInsurance: false,
+    insuranceType: 'homeowners',
+    insuranceAmount: ''
   });
 
   const [result, setResult] = useState<SimulationResult | null>(null);
@@ -43,7 +50,8 @@ export default function LoanSimulator() {
     { id: 1, title: 'Property Value', description: 'Enter property details' },
     { id: 2, title: 'Down Payment', description: 'Set your down payment' },
     { id: 3, title: 'Loan Terms', description: 'Interest rate and term' },
-    { id: 4, title: 'Results', description: 'View your calculations' }
+    { id: 4, title: 'Insurance', description: 'Property insurance options' },
+    { id: 5, title: 'Results', description: 'View your calculations' }
   ];
 
   const updateLoanData = (field: keyof LoanSimulatorState, value: string) => {
@@ -64,6 +72,8 @@ export default function LoanSimulator() {
       case 3:
         return loanData.interestRate && loanData.loanTerm;
       case 4:
+        return true; // Insurance is optional
+      case 5:
         return result !== null;
       default:
         return false;
@@ -71,9 +81,9 @@ export default function LoanSimulator() {
   };
 
   const nextStep = () => {
-    if (validateStep(currentStep) && currentStep < 4) {
+    if (validateStep(currentStep) && currentStep < 5) {
       setCurrentStep(currentStep + 1);
-      if (currentStep === 3) {
+      if (currentStep === 4) {
         calculateLoan();
       }
     }
@@ -115,12 +125,20 @@ export default function LoanSimulator() {
         const totalInterest = 0;
         const totalPayment = principal;
 
+        // Calculate insurance
+        const monthlyInsurance = loanData.includeInsurance && loanData.insuranceAmount 
+          ? parseFloat(loanData.insuranceAmount) / 12 
+          : 0;
+        const totalMonthlyPayment = monthlyPayment + monthlyInsurance;
+
         setResult({
           monthlyPayment: monthlyPayment.toFixed(2),
           totalInterest: totalInterest.toFixed(2),
           totalPayment: totalPayment.toFixed(2),
           downPaymentPercent: ((downPayment / propertyValue) * 100).toFixed(1),
-          loanToValue: ((principal / propertyValue) * 100).toFixed(1)
+          loanToValue: ((principal / propertyValue) * 100).toFixed(1),
+          monthlyInsurance: monthlyInsurance.toFixed(2),
+          totalMonthlyPayment: totalMonthlyPayment.toFixed(2)
         });
       } else {
         const monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) / 
@@ -128,12 +146,20 @@ export default function LoanSimulator() {
         const totalInterest = (monthlyPayment * numberOfPayments) - principal;
         const totalPayment = monthlyPayment * numberOfPayments;
 
+        // Calculate insurance
+        const monthlyInsurance = loanData.includeInsurance && loanData.insuranceAmount 
+          ? parseFloat(loanData.insuranceAmount) / 12 
+          : 0;
+        const totalMonthlyPayment = monthlyPayment + monthlyInsurance;
+
         setResult({
           monthlyPayment: monthlyPayment.toFixed(2),
           totalInterest: totalInterest.toFixed(2),
           totalPayment: totalPayment.toFixed(2),
           downPaymentPercent: ((downPayment / propertyValue) * 100).toFixed(1),
-          loanToValue: ((principal / propertyValue) * 100).toFixed(1)
+          loanToValue: ((principal / propertyValue) * 100).toFixed(1),
+          monthlyInsurance: monthlyInsurance.toFixed(2),
+          totalMonthlyPayment: totalMonthlyPayment.toFixed(2)
         });
       }
 
@@ -146,7 +172,10 @@ export default function LoanSimulator() {
       propertyValue: '',
       downPayment: '',
       interestRate: '6.5',
-      loanTerm: '30'
+      loanTerm: '30',
+      includeInsurance: false,
+      insuranceType: 'homeowners',
+      insuranceAmount: ''
     });
     setResult(null);
     setCurrentStep(1);
@@ -332,6 +361,87 @@ export default function LoanSimulator() {
       case 4:
         return (
           <View style={styles.stepContent}>
+            <Text style={styles.stepContentTitle}>Property Insurance</Text>
+            <Text style={styles.stepContentSubtitle}>Protect your investment with property insurance</Text>
+            
+            <View style={styles.inputGroup}>
+              <TouchableOpacity 
+                style={styles.insuranceToggle}
+                onPress={() => updateLoanData('includeInsurance', (!loanData.includeInsurance).toString())}
+              >
+                <View style={styles.toggleRow}>
+                  <Text style={styles.toggleLabel}>Include Property Insurance</Text>
+                  <View style={[styles.toggleSwitch, loanData.includeInsurance && styles.toggleSwitchActive]}>
+                    <View style={[styles.toggleThumb, loanData.includeInsurance && styles.toggleThumbActive]} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {loanData.includeInsurance && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Insurance Type</Text>
+                  <View style={styles.insuranceTypeContainer}>
+                    {[
+                      { id: 'homeowners', label: 'Homeowners Insurance', description: 'Comprehensive coverage' },
+                      { id: 'condo', label: 'Condo Insurance', description: 'For condominiums' },
+                      { id: 'renters', label: 'Renters Insurance', description: 'Personal property coverage' }
+                    ].map((type) => (
+                      <TouchableOpacity
+                        key={type.id}
+                        style={[
+                          styles.insuranceTypeOption,
+                          loanData.insuranceType === type.id && styles.insuranceTypeOptionSelected
+                        ]}
+                        onPress={() => updateLoanData('insuranceType', type.id)}
+                      >
+                        <Text style={[
+                          styles.insuranceTypeLabel,
+                          loanData.insuranceType === type.id && styles.insuranceTypeLabelSelected
+                        ]}>
+                          {type.label}
+                        </Text>
+                        <Text style={[
+                          styles.insuranceTypeDescription,
+                          loanData.insuranceType === type.id && styles.insuranceTypeDescriptionSelected
+                        ]}>
+                          {type.description}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Annual Insurance Premium ($)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={loanData.insuranceAmount}
+                    onChangeText={(value) => updateLoanData('insuranceAmount', value)}
+                    placeholder="Enter annual premium"
+                    keyboardType="numeric"
+                    placeholderTextColor="#64748b"
+                  />
+                </View>
+
+                <View style={styles.insuranceInfo}>
+                  <Text style={styles.insuranceInfoTitle}>🛡️ Why Property Insurance?</Text>
+                  <Text style={styles.insuranceInfoText}>
+                    • Protects your property from damage (fire, storms, theft)
+                    • Covers liability if someone is injured on your property
+                    • Required by most lenders for mortgage approval
+                    • Provides peace of mind for your investment
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+        );
+
+      case 5:
+        return (
+          <View style={styles.stepContent}>
             <Text style={styles.stepContentTitle}>Your Loan Calculation</Text>
             <Text style={styles.stepContentSubtitle}>Here's your estimated mortgage details</Text>
             
@@ -339,6 +449,19 @@ export default function LoanSimulator() {
               <View style={styles.resultCard}>
                 <Text style={styles.resultTitle}>Monthly Payment</Text>
                 <Text style={styles.monthlyPaymentAmount}>${result.monthlyPayment}</Text>
+                
+                {loanData.includeInsurance && parseFloat(result.monthlyInsurance) > 0 && (
+                  <View style={styles.insuranceBreakdown}>
+                    <View style={styles.insuranceRow}>
+                      <Text style={styles.insuranceLabel}>Monthly Insurance:</Text>
+                      <Text style={styles.insuranceValue}>${result.monthlyInsurance}</Text>
+                    </View>
+                    <View style={styles.totalPaymentRow}>
+                      <Text style={styles.totalPaymentLabel}>Total Monthly Payment:</Text>
+                      <Text style={styles.totalPaymentValue}>${result.totalMonthlyPayment}</Text>
+                    </View>
+                  </View>
+                )}
                 
                 <View style={styles.resultGrid}>
                   <View style={styles.resultItem}>
@@ -403,7 +526,7 @@ export default function LoanSimulator() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f0f9ff" />
+      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       
       <ScrollView 
         style={styles.scrollView} 
@@ -421,55 +544,55 @@ export default function LoanSimulator() {
           </TouchableOpacity>
         </View>
 
-        {/* Step Tabs */}
-        <View style={styles.stepTabs}>
-          {steps.map((step, index) => (
-            <TouchableOpacity
-              key={step.id}
-              style={[
-                styles.stepTab,
-                currentStep === step.id && styles.stepTabActive
-              ]}
-              onPress={() => setCurrentStep(step.id)}
-            >
-              <Text style={[
-                styles.stepTabText,
-                currentStep === step.id && styles.stepTabTextActive
-              ]}>
-                {step.title}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Step Indicators */}
-        <View style={styles.stepIndicators}>
-          {steps.map((step, index) => (
-            <View key={step.id} style={styles.indicatorContainer}>
-              <View style={[
-                styles.indicator,
-                currentStep >= step.id && styles.indicatorActive,
-                currentStep > step.id && styles.indicatorCompleted
-              ]}>
-                {currentStep > step.id ? (
-                  <Text style={styles.checkmark}>✓</Text>
-                ) : (
-                  <Text style={[
-                    styles.indicatorNumber,
-                    currentStep === step.id && styles.indicatorNumberActive
-                  ]}>
-                    {step.id}
-                  </Text>
-                )}
-              </View>
-              {index < steps.length - 1 && (
-                <View style={[
-                  styles.indicatorLine,
-                  currentStep > step.id && styles.indicatorLineActive
-                ]} />
-              )}
+        {/* Compact Step Progress */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressTitle}>Step {currentStep} of {steps.length}</Text>
+            <Text style={styles.progressSubtitle}>{steps[currentStep - 1]?.title}</Text>
+          </View>
+          
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { width: `${(currentStep / steps.length) * 100}%` }
+                ]} 
+              />
             </View>
-          ))}
+            <Text style={styles.progressPercentage}>
+              {Math.round((currentStep / steps.length) * 100)}%
+            </Text>
+          </View>
+          
+          <View style={styles.stepDots}>
+            {steps.map((step, index) => (
+              <View key={step.id} style={styles.stepDotContainer}>
+                <View style={[
+                  styles.stepDot,
+                  currentStep >= step.id && styles.stepDotActive,
+                  currentStep > step.id && styles.stepDotCompleted
+                ]}>
+                  {currentStep > step.id ? (
+                    <Text style={styles.stepDotCheckmark}>✓</Text>
+                  ) : (
+                    <Text style={[
+                      styles.stepDotNumber,
+                      currentStep === step.id && styles.stepDotNumberActive
+                    ]}>
+                      {step.id}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[
+                  styles.stepDotLabel,
+                  currentStep === step.id && styles.stepDotLabelActive
+                ]}>
+                  {step.title.split(' ')[0]}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Step Content */}
@@ -571,7 +694,7 @@ export default function LoanSimulator() {
 
       </ScrollView>
 
-      <BuyerBottomNavigation />
+      
     </View>
   );
 }
@@ -579,7 +702,7 @@ export default function LoanSimulator() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#1e293b',
   },
   scrollView: {
     flex: 1,
@@ -594,23 +717,23 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#1e293b',
   },
   greeting: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 4,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   helpButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -622,91 +745,106 @@ const styles = StyleSheet.create({
   helpIcon: {
     fontSize: 20,
   },
-  // Step Tabs
-  stepTabs: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
+  // Compact Progress Design
+  progressContainer: {
+    backgroundColor: '#334155',
     marginHorizontal: 20,
     marginBottom: 20,
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
   },
-  stepTab: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+  progressHeader: {
     alignItems: 'center',
+    marginBottom: 16,
   },
-  stepTabActive: {
-    backgroundColor: '#3b82f6',
-  },
-  stepTabText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  stepTabTextActive: {
-    color: 'white',
+  progressTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 4,
   },
-  // Step Indicators
-  stepIndicators: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 30,
-    paddingHorizontal: 20,
+  progressSubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
   },
-  indicatorContainer: {
+  progressBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
   },
-  indicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#e2e8f0',
-    justifyContent: 'center',
+  progressBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#475569',
+    borderRadius: 3,
+    marginRight: 12,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 3,
+  },
+  progressPercentage: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0ea5e9',
+    minWidth: 35,
+  },
+  stepDots: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  indicatorActive: {
-    backgroundColor: '#3b82f6',
+  stepDotContainer: {
+    alignItems: 'center',
+    flex: 1,
   },
-  indicatorCompleted: {
+  stepDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#475569',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  stepDotActive: {
+    backgroundColor: '#0ea5e9',
+  },
+  stepDotCompleted: {
     backgroundColor: '#10b981',
   },
-  indicatorNumber: {
-    fontSize: 14,
+  stepDotNumber: {
+    fontSize: 10,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#94a3b8',
   },
-  indicatorNumberActive: {
+  stepDotNumberActive: {
     color: 'white',
   },
-  checkmark: {
-    fontSize: 16,
+  stepDotCheckmark: {
+    fontSize: 12,
     color: 'white',
     fontWeight: 'bold',
   },
-  indicatorLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: 8,
+  stepDotLabel: {
+    fontSize: 10,
+    color: '#94a3b8',
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  indicatorLineActive: {
-    backgroundColor: '#10b981',
+  stepDotLabelActive: {
+    color: '#0ea5e9',
+    fontWeight: '600',
   },
   // Step Content
   stepContentContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     marginHorizontal: 20,
     borderRadius: 16,
     padding: 24,
@@ -731,17 +869,17 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#e2e8f0',
     marginBottom: 12,
   },
   input: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#475569',
     borderRadius: 16,
     padding: 18,
     fontSize: 16,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
-    color: '#1e293b',
+    borderColor: '#64748b',
+    color: '#f8fafc',
   },
   presetButtons: {
     flexDirection: 'row',
@@ -749,16 +887,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   presetButton: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#475569',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#bae6fd',
+    borderColor: '#64748b',
   },
   presetButtonText: {
     fontSize: 14,
-    color: '#0369a1',
+    color: '#e2e8f0',
     fontWeight: '600',
   },
   buttonContainer: {
@@ -814,13 +952,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   resultCard: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#334155',
     borderRadius: 20,
     padding: 24,
     marginBottom: 20,
     marginHorizontal: 20,
     borderWidth: 2,
-    borderColor: '#bae6fd',
+    borderColor: '#0ea5e9',
     shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -836,7 +974,7 @@ const styles = StyleSheet.create({
   resultTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   resultBadge: {
     backgroundColor: '#10b981',
@@ -850,17 +988,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   monthlyPaymentHighlight: {
-    backgroundColor: 'white',
+    backgroundColor: '#475569',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: '#bae6fd',
+    borderColor: '#0ea5e9',
   },
   monthlyPaymentLabel: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 8,
     fontWeight: '500',
   },
@@ -868,11 +1006,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   resultItem: {
-    backgroundColor: 'white',
+    backgroundColor: '#475569',
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
-    borderColor: '#e0f2fe',
+    borderColor: '#64748b',
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -880,7 +1018,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -896,13 +1034,13 @@ const styles = StyleSheet.create({
   },
   resultLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     fontWeight: '500',
   },
   resultValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   stepContent: {
     marginBottom: 0,
@@ -910,12 +1048,12 @@ const styles = StyleSheet.create({
   stepContentTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 8,
   },
   stepContentSubtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 32,
   },
   // Continue Button
@@ -924,18 +1062,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   continueButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#0ea5e9',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   continueButtonDisabled: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#475569',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -945,20 +1083,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   continueButtonTextDisabled: {
-    color: '#94a3b8',
+    color: '#64748b',
   },
   calculationPreview: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#475569',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: '#64748b',
   },
   calculationPreviewTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 8,
   },
   calculationRow: {
@@ -969,12 +1107,12 @@ const styles = StyleSheet.create({
   },
   calculationLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#94a3b8',
   },
   calculationValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   autoCalculateToggle: {
     marginTop: 16,
@@ -984,33 +1122,159 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#475569',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#64748b',
   },
   toggleButtonText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#e2e8f0',
     fontWeight: '500',
   },
   noResultCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#475569',
     borderRadius: 12,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#64748b',
   },
   noResultText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     textAlign: 'center',
   },
   monthlyPaymentAmount: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  // Insurance Styles
+  insuranceToggle: {
+    marginBottom: 24,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#475569',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleSwitchActive: {
+    backgroundColor: '#0ea5e9',
+  },
+  toggleThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#f8fafc',
+    alignSelf: 'flex-start',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
+  insuranceTypeContainer: {
+    gap: 12,
+  },
+  insuranceTypeOption: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#64748b',
+  },
+  insuranceTypeOptionSelected: {
+    backgroundColor: '#334155',
+    borderColor: '#0ea5e9',
+  },
+  insuranceTypeLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e2e8f0',
+    marginBottom: 4,
+  },
+  insuranceTypeLabelSelected: {
+    color: '#f8fafc',
+  },
+  insuranceTypeDescription: {
+    fontSize: 14,
+    color: '#94a3b8',
+  },
+  insuranceTypeDescriptionSelected: {
+    color: '#e2e8f0',
+  },
+  insuranceInfo: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0ea5e9',
+  },
+  insuranceInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 8,
+  },
+  insuranceInfoText: {
+    fontSize: 14,
+    color: '#e2e8f0',
+    lineHeight: 20,
+  },
+  insuranceBreakdown: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#0ea5e9',
+  },
+  insuranceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  insuranceLabel: {
+    fontSize: 14,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  insuranceValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0ea5e9',
+  },
+  totalPaymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#64748b',
+  },
+  totalPaymentLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+  },
+  totalPaymentValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#10b981',
   },
 });
