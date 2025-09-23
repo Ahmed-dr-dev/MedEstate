@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
-import { BuyerBottomNav } from '../../../components/BuyerBottomNav';
+import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
 
 interface LoanApplication {
   id: string;

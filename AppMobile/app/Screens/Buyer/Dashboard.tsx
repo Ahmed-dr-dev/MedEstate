@@ -1,107 +1,90 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
   StatusBar,
   Dimensions,
+  ScrollView,
+  Animated,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
-import { BuyerBottomNav } from '../../../components/BuyerBottomNav';
+import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
 
 const { width } = Dimensions.get('window');
 
 interface DashboardStats {
   savedProperties: number;
-  viewedProperties: number;
   loanApplications: number;
   scheduledVisits: number;
 }
 
-interface RecentActivity {
+interface MarketTrend {
   id: string;
-  type: 'view' | 'favorite' | 'loan' | 'visit';
   title: string;
-  subtitle: string;
-  time: string;
+  value: string;
+  change: string;
+  trend: 'up' | 'down';
 }
 
 export default function BuyerDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats] = useState<DashboardStats>({
     savedProperties: 12,
-    viewedProperties: 45,
     loanApplications: 3,
     scheduledVisits: 2,
   });
 
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([
+  const [marketTrends] = useState<MarketTrend[]>([
     {
       id: '1',
-      type: 'favorite',
-      title: 'Modern Medical Office',
-      subtitle: 'Added to favorites',
-      time: '2 hours ago'
+      title: 'Average Home Price',
+      value: '$485,000',
+      change: '+2.3%',
+      trend: 'up'
     },
     {
       id: '2',
-      type: 'loan',
-      title: 'Loan Application Submitted',
-      subtitle: 'Downtown Medical Center',
-      time: '1 day ago'
+      title: 'Interest Rate',
+      value: '6.2%',
+      change: '-0.1%',
+      trend: 'down'
     },
     {
       id: '3',
-      type: 'visit',
-      title: 'Property Visit Scheduled',
-      subtitle: 'Medical Plaza Building',
-      time: '2 days ago'
+      title: 'Market Activity',
+      value: 'High',
+      change: '+15%',
+      trend: 'up'
     },
   ]);
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'view': return '👀';
-      case 'favorite': return '❤️';
-      case 'loan': return '💰';
-      case 'visit': return '📅';
-      default: return '📋';
-    }
-  };
-
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case 'view': return '#64748b';
-      case 'favorite': return '#ef4444';
-      case 'loan': return '#10b981';
-      case 'visit': return '#f59e0b';
-      default: return '#64748b';
-    }
-  };
-
-  const renderStatCard = (title: string, value: number, icon: string, color: string) => (
+  const renderStatCard = (title: string, value: number, icon: string, color: string, description: string) => (
     <View style={[styles.statCard, { borderLeftColor: color }]}>
       <View style={styles.statHeader}>
-        <Text style={styles.statIcon}>{icon}</Text>
+        <View style={styles.statIconContainer}>
+          <Text style={styles.statIcon}>{icon}</Text>
+        </View>
         <Text style={[styles.statValue, { color }]}>{value}</Text>
       </View>
       <Text style={styles.statTitle}>{title}</Text>
+      <Text style={styles.statDescription}>{description}</Text>
     </View>
   );
 
-  const renderActivity = ({ item }: { item: RecentActivity }) => (
-    <View style={styles.activityItem}>
-      <View style={[styles.activityIcon, { backgroundColor: getActivityColor(item.type) + '20' }]}>
-        <Text style={styles.activityIconText}>{getActivityIcon(item.type)}</Text>
+  const renderMarketTrend = (trend: MarketTrend) => (
+    <View key={trend.id} style={styles.trendCard}>
+      <View style={styles.trendHeader}>
+        <Text style={styles.trendTitle}>{trend.title}</Text>
+        <View style={[styles.trendIndicator, { backgroundColor: trend.trend === 'up' ? '#dcfce7' : '#fef2f2' }]}>
+          <Text style={[styles.trendChange, { color: trend.trend === 'up' ? '#16a34a' : '#dc2626' }]}>
+            {trend.trend === 'up' ? '↗' : '↘'} {trend.change}
+          </Text>
+        </View>
       </View>
-      <View style={styles.activityContent}>
-        <Text style={styles.activityTitle}>{item.title}</Text>
-        <Text style={styles.activitySubtitle}>{item.subtitle}</Text>
-      </View>
-      <Text style={styles.activityTime}>{item.time}</Text>
+      <Text style={styles.trendValue}>{trend.value}</Text>
     </View>
   );
 
@@ -120,12 +103,25 @@ export default function BuyerDashboard() {
             <Text style={styles.greeting}>Welcome back! 👋</Text>
             <Text style={styles.userName}>{user?.display_name || 'Buyer'}</Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Text style={styles.notificationIcon}>🔔</Text>
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.searchButton}>
+              <Text style={styles.searchIcon}>🔍</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.notificationButton}>
+              <Text style={styles.notificationIcon}>🔔</Text>
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>3</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Market Overview */}
+        <View style={styles.marketSection}>
+          <Text style={styles.sectionTitle}>Market Overview</Text>
+          <View style={styles.trendsContainer}>
+            {marketTrends.map(renderMarketTrend)}
+          </View>
         </View>
 
         {/* Quick Actions */}
@@ -136,33 +132,44 @@ export default function BuyerDashboard() {
               style={styles.quickActionCard}
               onPress={() => router.push('/Screens/Buyer/BrowseProperties')}
             >
-              <Text style={styles.quickActionIcon}>🏠</Text>
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>🔍</Text>
+              </View>
               <Text style={styles.quickActionTitle}>Browse</Text>
               <Text style={styles.quickActionSubtitle}>Find properties</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.quickActionCard}
-              onPress={() => router.push('/Screens/Buyer/Favorites')}
+              onPress={() => router.push('/Screens/Buyer/AddProperty')}
             >
-              <Text style={styles.quickActionIcon}>❤️</Text>
-              <Text style={styles.quickActionTitle}>Favorites</Text>
-              <Text style={styles.quickActionSubtitle}>Saved properties</Text>
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>🏠</Text>
+              </View>
+              <Text style={styles.quickActionTitle}>Post Property</Text>
+              <Text style={styles.quickActionSubtitle}>List for sale</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.quickActionCard}
+              onPress={() => router.push('/Screens/Buyer/LoanSimulator')}
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>🧮</Text>
+              </View>
+              <Text style={styles.quickActionTitle}>Simulator</Text>
+              <Text style={styles.quickActionSubtitle}>Calculate loans</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.quickActionCard}
               onPress={() => router.push('/Screens/Buyer/LoanApplication')}
             >
-              <Text style={styles.quickActionIcon}>💰</Text>
-              <Text style={styles.quickActionTitle}>Loans</Text>
-              <Text style={styles.quickActionSubtitle}>Track applications</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.quickActionCard}>
-              <Text style={styles.quickActionIcon}>📞</Text>
-              <Text style={styles.quickActionTitle}>Support</Text>
-              <Text style={styles.quickActionSubtitle}>Get help</Text>
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>📋</Text>
+              </View>
+              <Text style={styles.quickActionTitle}>Apply</Text>
+              <Text style={styles.quickActionSubtitle}>Submit application</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -170,42 +177,11 @@ export default function BuyerDashboard() {
         {/* Stats Overview */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Your Activity</Text>
-          <View style={styles.statsGrid}>
-            {renderStatCard('Saved Properties', stats.savedProperties, '❤️', '#ef4444')}
-            {renderStatCard('Properties Viewed', stats.viewedProperties, '👀', '#2563eb')}
-            {renderStatCard('Loan Applications', stats.loanApplications, '💰', '#10b981')}
-            {renderStatCard('Scheduled Visits', stats.scheduledVisits, '📅', '#f59e0b')}
+          <View style={styles.statsContainer}>
+            {renderStatCard('Saved Properties', stats.savedProperties, '❤️', '#ef4444', 'Properties you\'ve favorited')}
+            {renderStatCard('Loan Applications', stats.loanApplications, '💰', '#10b981', 'Applications submitted')}
+            {renderStatCard('Scheduled Visits', stats.scheduledVisits, '📅', '#f59e0b', 'Property visits planned')}
           </View>
-        </View>
-
-        {/* Recent Activity */}
-        <View style={styles.activitySection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.activityList}>
-            {recentActivity.map((item) => (
-              <View key={item.id}>
-                {renderActivity({ item })}
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Featured Properties */}
-        <View style={styles.featuredSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recommended for You</Text>
-            <TouchableOpacity onPress={() => router.push('/Screens/Buyer/BrowseProperties')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={styles.comingSoonText}>Featured properties coming soon...</Text>
         </View>
       </ScrollView>
 
@@ -223,7 +199,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Space for bottom navigation
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
@@ -244,14 +220,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1e293b',
   },
-  notificationButton: {
-    position: 'relative',
+  headerActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  searchButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  searchIcon: {
+    fontSize: 20,
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
   },
   notificationIcon: {
     fontSize: 20,
@@ -260,166 +251,162 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
     backgroundColor: '#ef4444',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   notificationBadgeText: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
   },
+  // Market Section
+  marketSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  trendsContainer: {
+    gap: 12,
+  },
+  trendCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  trendHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  trendTitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  trendIndicator: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  trendChange: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  trendValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  // Quick Actions
   quickActionsSection: {
     paddingHorizontal: 20,
-    paddingVertical: 24,
-    backgroundColor: 'white',
-    marginBottom: 12,
+    paddingTop: 20,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#1e293b',
     marginBottom: 16,
   },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   quickActionCard: {
-    width: '48%',
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
+    width: (width - 52) / 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  quickActionIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f0f9ff',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   quickActionIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 24,
   },
   quickActionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1e293b',
     marginBottom: 4,
+    textAlign: 'center',
   },
   quickActionSubtitle: {
     fontSize: 12,
     color: '#64748b',
     textAlign: 'center',
   },
+  // Stats Section
   statsSection: {
     paddingHorizontal: 20,
-    paddingVertical: 24,
-    backgroundColor: 'white',
-    marginBottom: 12,
+    paddingTop: 20,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  statsContainer: {
+    gap: 16,
   },
   statCard: {
-    width: '48%',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
     borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   statHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statIcon: {
     fontSize: 20,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
   },
   statTitle: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  activitySection: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    backgroundColor: 'white',
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: '#2563eb',
+    fontSize: 16,
+    color: '#1e293b',
     fontWeight: '600',
-  },
-  activityList: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 4,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: 'white',
-    borderRadius: 8,
     marginBottom: 4,
   },
-  activityIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  activityIconText: {
-    fontSize: 16,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
+  statDescription: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 2,
-  },
-  activitySubtitle: {
-    fontSize: 12,
     color: '#64748b',
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  featuredSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    backgroundColor: 'white',
-    marginBottom: 12,
-  },
-  comingSoonText: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    paddingVertical: 40,
-    fontStyle: 'italic',
+    lineHeight: 20,
   },
 });

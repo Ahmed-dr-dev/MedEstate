@@ -6,3 +6,4 @@ CREATE TYPE user_role AS ENUM ('buyer', 'seller', 'bank_agent', 'admin');
 -- 
 -- Or if using a custom users/profiles table:
 -- ALTER TABLE public.profiles ADD COLUMN user_role user_role DEFAULT 'buyer';
+

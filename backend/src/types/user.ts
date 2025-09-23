@@ -14,3 +14,4 @@ export interface UserMetadata {
   phone?: string;
   role: UserRole;
 }
+

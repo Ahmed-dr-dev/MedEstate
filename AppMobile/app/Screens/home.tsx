@@ -4,6 +4,7 @@ import {
   Text, 
   TouchableOpacity, 
   StyleSheet, 
+  SafeAreaView, 
   StatusBar,
   ScrollView,
   Dimensions
@@ -12,13 +13,13 @@ import { API_BASE_URL } from '@/constants/api';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { NavigationHeader } from '../../components/NavigationHeader';
-
+import { ProtectedRoute } from '../../components/ProtectedRoute';
 const { width, height } = Dimensions.get('window');
 
 export default function Home() {
   const [connectionStatus, setConnectionStatus] = useState('Ready to test');
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, navigateToRoleHome } = useAuth();
 
   const testConnection = async () => {
     setIsLoading(true);
@@ -43,26 +44,12 @@ export default function Home() {
   };
 
   const handleGoToRoleHome = () => {
-    if (!user) return;
-    
-    switch (user.role) {
-      case 'buyer':
-        router.push('/Screens/Buyer/BrowseProperties');
-        break;
-      case 'seller':
-        router.push('/Screens/Seller/Dashboard');
-        break;
-      case 'bank_agent':
-        router.push('/Screens/BankAgent/LoanReviewDashboard');
-        break;
-      default:
-        router.push('/Screens/Buyer/BrowseProperties');
-        break;
-    }
+    navigateToRoleHome();
   };
 
   return (
-    <View style={styles.container}>
+    <ProtectedRoute allowedRoles={['admin']}>
+      <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
         
         {/* Background Gradient Effect */}
@@ -81,7 +68,7 @@ export default function Home() {
           <View style={[styles.floatingSquare, styles.square2]} />
         </View>
 
-        <View style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea}>
           <NavigationHeader 
             title="Admin Dashboard" 
             subtitle={`Welcome back, ${user?.display_name || 'Admin'}`}
@@ -156,8 +143,9 @@ export default function Home() {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </View>
+    </ProtectedRoute>
   );
 }
 

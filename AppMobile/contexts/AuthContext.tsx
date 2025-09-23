@@ -26,6 +26,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
+  navigateToRoleHome: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -168,6 +169,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const navigateToRoleHome = () => {
+    if (user) {
+      redirectToRoleDashboard(user.role);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     session,
@@ -175,6 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated,
     signIn,
     signOut,
+    navigateToRoleHome,
   };
 
   return (

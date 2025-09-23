@@ -18,8 +18,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'dashboard', label: 'Home', icon: '🏡', route: '/Screens/Buyer/Dashboard' },
   { name: 'browse', label: 'Browse', icon: '🔍', route: '/Screens/Buyer/BrowseProperties' },
-  { name: 'favorites', label: 'Favorites', icon: '❤️', route: '/Screens/Buyer/Favorites' },
-  { name: 'loans', label: 'Loans', icon: '💰', route: '/Screens/Buyer/LoanStatus' },
+  { name: 'simulator', label: 'Simulator', icon: '🧮', route: '/Screens/Buyer/LoanSimulator' },
+  { name: 'applications', label: 'Applications', icon: '📋', route: '/Screens/Buyer/LoanApplication' },
+  { name: 'profile', label: 'Profile', icon: '👤', route: '/Screens/Buyer/Profile' },
 ];
 
 export const BuyerBottomNav: React.FC = () => {
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20, // Safe area for iPhone home indicator
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -85,37 +86,37 @@ const styles = StyleSheet.create({
   },
   navBar: {
     flexDirection: 'row',
-    paddingHorizontal: 8,
-    paddingTop: 12,
+    paddingHorizontal: 4,
+    paddingTop: 8,
     paddingBottom: 8,
     backgroundColor: 'white',
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+    borderRadius: 8,
   },
   activeNavItem: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#dbeafe',
   },
   navIcon: {
-    fontSize: 20,
-    marginBottom: 4,
+    fontSize: 18,
+    marginBottom: 2,
     opacity: 0.6,
   },
   activeNavIcon: {
     opacity: 1,
   },
   navLabel: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '500',
     color: '#64748b',
     textAlign: 'center',
   },
   activeNavLabel: {
-    color: '#2563eb',
+    color: '#3b82f6',
     fontWeight: '600',
   },
 });

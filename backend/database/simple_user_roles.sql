@@ -5,3 +5,4 @@ CREATE TYPE user_role AS ENUM ('buyer', 'seller', 'bank_agent', 'admin');
 
 -- You can run this in your Supabase SQL editor
 -- The signup will store the role in user metadata which doesn't require the enum in the database
+
