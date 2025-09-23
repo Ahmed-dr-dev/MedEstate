@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
-import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 const { width } = Dimensions.get('window');
 
@@ -191,38 +190,12 @@ export default function BuyerDashboard() {
               <Text style={styles.buyerIcon}>🏠</Text>
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.greeting}>Welcome back!</Text>
-              <Text style={styles.userName}>{user?.display_name || 'Buyer'}</Text>
+              <Text style={styles.userName}>Welcome back! {user?.display_name || 'Buyer'}</Text>
               <Text style={styles.subtitle}>Find your dream home</Text>
             </View>
           </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.searchButton} activeOpacity={0.8}>
-              <Text style={styles.searchIcon}>🔍</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
-              <Text style={styles.notificationIcon}>🔔</Text>
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>3</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
         </Animated.View>
 
-        {/* Market Overview */}
-        <Animated.View 
-          style={[
-            styles.marketSection,
-            {
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          <Text style={styles.sectionTitle}>Market Overview</Text>
-          <View style={styles.trendsContainer}>
-            {marketTrends.map(renderMarketTrend)}
-          </View>
-        </Animated.View>
 
         {/* Quick Actions */}
         <Animated.View 
@@ -235,16 +208,7 @@ export default function BuyerDashboard() {
         >
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
-            <TouchableOpacity 
-              style={styles.quickActionCard}
-              onPress={() => router.push('/Screens/Buyer/BrowseProperties')}
-            >
-              <View style={styles.quickActionIconContainer}>
-                <Text style={styles.quickActionIcon}>🔍</Text>
-              </View>
-              <Text style={styles.quickActionTitle}>Browse</Text>
-              <Text style={styles.quickActionSubtitle}>Find properties</Text>
-            </TouchableOpacity>
+          
             
             <TouchableOpacity 
               style={styles.quickActionCard}
@@ -268,16 +232,7 @@ export default function BuyerDashboard() {
               <Text style={styles.quickActionSubtitle}>Calculate loans</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity 
-              style={styles.quickActionCard}
-              onPress={() => router.push('/Screens/Buyer/LoanApplication')}
-            >
-              <View style={styles.quickActionIconContainer}>
-                <Text style={styles.quickActionIcon}>📋</Text>
-              </View>
-              <Text style={styles.quickActionTitle}>Apply</Text>
-              <Text style={styles.quickActionSubtitle}>Submit application</Text>
-            </TouchableOpacity>
+          
           </View>
         </Animated.View>
 
@@ -299,7 +254,6 @@ export default function BuyerDashboard() {
         </Animated.View>
       </Animated.ScrollView>
 
-      <BuyerBottomNavigation />
     </View>
   );
 }
@@ -335,7 +289,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   header: {
     paddingTop: 60,
@@ -381,53 +335,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  searchButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  searchIcon: {
-    fontSize: 20,
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  notificationIcon: {
-    fontSize: 20,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#ef4444',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
   },
   // Market Section
   marketSection: {

@@ -103,7 +103,7 @@ export default function LoanApplication() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       
       {/* Animated Background - Above and Below Buttons */}
       <View style={styles.animatedBackground}>
@@ -172,7 +172,7 @@ export default function LoanApplication() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1e293b',
   },
   animatedBackground: {
     position: 'absolute',
@@ -184,11 +184,11 @@ const styles = StyleSheet.create({
   },
   floatingElement: {
     position: 'absolute',
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    backgroundColor: 'rgba(14, 165, 233, 0.08)',
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -215,23 +215,23 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: 'white',
+    backgroundColor: '#1e293b',
   },
   greeting: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#94a3b8',
     marginBottom: 4,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#f8fafc',
   },
   helpButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -243,21 +243,21 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   primaryActionButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#0ea5e9',
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#3b82f6',
+    shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
   secondaryActionButton: {
-    backgroundColor: 'white',
+    backgroundColor: '#334155',
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#475569',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -295,17 +295,17 @@ const styles = StyleSheet.create({
   secondaryActionButtonTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#f8fafc',
     marginBottom: 4,
   },
   secondaryActionButtonSubtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#94a3b8',
     fontWeight: '400',
   },
   secondaryActionButtonArrow: {
     fontSize: 20,
-    color: '#3b82f6',
+    color: '#0ea5e9',
     fontWeight: 'bold',
   },
 });

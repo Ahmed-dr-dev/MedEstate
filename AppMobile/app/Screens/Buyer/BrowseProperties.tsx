@@ -10,7 +10,8 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
+import { PropertyCard } from '../../../components';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -173,60 +174,16 @@ export default function BrowseProperties() {
     return matchesSearch && matchesFilter;
   });
 
-  const renderPropertyCard = (property: Property) => (
-    <View key={property.id} style={styles.propertyCard}>
-      <View style={styles.propertyImageSection}>
-        <View style={styles.propertyImageContainer}>
-          <Text style={styles.propertyImage}>{property.image}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.likeButton}
-          onPress={() => toggleLike(property.id)}
-        >
-          <Text style={[styles.likeIcon, property.isLiked && styles.likedIcon]}>
-            {property.isLiked ? '❤️' : '🤍'}
-          </Text>
-        </TouchableOpacity>
-        <View style={styles.propertyTypeBadge}>
-          <Text style={styles.propertyTypeText}>{property.type}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.propertyContent}>
-        <Text style={styles.propertyTitle}>{property.title}</Text>
-        <Text style={styles.propertyLocation}>{property.location}</Text>
-        <Text style={styles.propertySize}>{property.size}</Text>
-        <Text style={styles.propertyDescription} numberOfLines={2}>
-          {property.description}
-        </Text>
-        
-        <View style={styles.featuresContainer}>
-          {property.features.slice(0, 2).map((feature, index) => (
-            <View key={index} style={styles.featureTag}>
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
-          {property.features.length > 2 && (
-            <View style={styles.featureTag}>
-              <Text style={styles.featureText}>+{property.features.length - 2}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-      
-      <View style={styles.propertyFooter}>
-        <View style={styles.priceSection}>
-          <Text style={styles.propertyPrice}>${property.price.toLocaleString()}</Text>
-          <Text style={styles.pricePerSqft}>
-            ${Math.round(property.price / parseInt(property.size.replace(/[^\d]/g, ''))).toLocaleString()}/sq ft
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>View</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const handleLike = (id: string) => {
+    toggleLike(id);
+  };
+
+  const handleView = (id: string) => {
+    router.push({
+      pathname: '/Screens/Buyer/PropertyDetails/PropertyDetails',
+      params: { id: id }
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -290,9 +247,7 @@ export default function BrowseProperties() {
               <Text style={styles.subtitle}>Discover your perfect property</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterIcon}>⚙️</Text>
-          </TouchableOpacity>
+      
         </View>
 
         {/* Search Section */}
@@ -342,19 +297,23 @@ export default function BrowseProperties() {
             <Text style={styles.resultsCount}>
               {filteredProperties.length} properties found
             </Text>
-            <TouchableOpacity style={styles.sortButton}>
-              <Text style={styles.sortButtonText}>Sort by Price</Text>
-            </TouchableOpacity>
+          
           </View>
 
           {/* Properties Grid */}
           <View style={styles.propertiesGrid}>
-            {filteredProperties.map(renderPropertyCard)}
+            {filteredProperties.map((property) => (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                onLike={handleLike}
+                onView={handleView}
+              />
+            ))}
           </View>
         </View>
       </Animated.ScrollView>
 
-      <BuyerBottomNavigation />
     </View>
   );
 }
