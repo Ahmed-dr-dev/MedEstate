@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,11 @@ import {
   StyleSheet,
   StatusBar,
   Alert,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
+import BottomNavigation from '../../../components/BankAgent/BottomNavigation';
 
 interface LoanApplication {
   id: string;
@@ -32,6 +35,51 @@ interface BankAgentStats {
 
 export default function BankAgentDashboard() {
   const { user } = useAuth();
+  const { width, height } = Dimensions.get('window');
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+  const floatAnim3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Floating animations
+    const createFloatingAnimation = (animValue: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: -20,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+        ]),
+        { iterations: -1 }
+      );
+    };
+
+    setTimeout(() => createFloatingAnimation(floatAnim1, 0).start(), 500);
+    setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
+    setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
+  }, []);
   const [stats] = useState<BankAgentStats>({
     totalApplications: 24,
     pendingApplications: 8,
@@ -115,16 +163,20 @@ export default function BankAgentDashboard() {
     );
   };
 
-  const renderStatCard = (title: string, value: number, icon: string, color: string) => (
-    <View style={[styles.statCard, { borderLeftColor: color }]}>
+  const renderStatCard = (title: string, value: number, icon: string, color: string, subtitle: string) => (
+    <TouchableOpacity 
+      style={[styles.statCard, { borderLeftColor: color }]} 
+      activeOpacity={0.9}
+    >
       <View style={styles.statHeader}>
-        <View style={styles.statIconContainer}>
+        <View style={[styles.statIconContainer, { backgroundColor: color + '20' }]}>
           <Text style={styles.statIcon}>{icon}</Text>
         </View>
         <Text style={[styles.statValue, { color }]}>{value}</Text>
       </View>
       <Text style={styles.statTitle}>{title}</Text>
-    </View>
+      <Text style={styles.statSubtitle}>{subtitle}</Text>
+    </TouchableOpacity>
   );
 
   const renderApplicationCard = (application: LoanApplication) => (
@@ -204,47 +256,121 @@ export default function BankAgentDashboard() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <ScrollView 
-        style={styles.scrollView} 
+      {/* Animated Background Elements */}
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle1,
+          {
+            transform: [{ translateY: floatAnim1 }],
+            left: width * 0.1,
+            top: height * 0.15,
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.square1,
+          {
+            transform: [{ translateY: floatAnim2 }],
+            right: width * 0.15,
+            top: height * 0.25,
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle2,
+          {
+            transform: [{ translateY: floatAnim3 }],
+            left: width * 0.7,
+            bottom: height * 0.3,
+          }
+        ]} 
+      />
+      
+      <Animated.ScrollView 
+        style={[styles.scrollView, { opacity: fadeAnim }]} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Welcome back! 👋</Text>
-            <Text style={styles.userName}>{user?.display_name || 'Bank Agent'}</Text>
-            <View style={styles.verificationBadge}>
-              <Text style={styles.verificationIcon}>✅</Text>
-              <Text style={styles.verificationText}>Verified Bank Agent</Text>
+        <Animated.View 
+          style={[
+            styles.header,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.bankIconContainer}>
+              <Text style={styles.bankIcon}>🏦</Text>
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting}>Welcome back!</Text>
+              <Text style={styles.userName}>{user?.display_name || 'Bank Agent'}</Text>
+              <Text style={styles.subtitle}>Ready to review applications</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity style={styles.profileButton} activeOpacity={0.8}>
             <Text style={styles.profileIcon}>👤</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* Stats Overview */}
-        <View style={styles.statsSection}>
+        <Animated.View 
+          style={[
+            styles.statsSection,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Application Overview</Text>
           <View style={styles.statsGrid}>
-            {renderStatCard('Total Applications', stats.totalApplications, '📋', '#3b82f6')}
-            {renderStatCard('Pending Review', stats.pendingApplications, '⏳', '#f59e0b')}
-            {renderStatCard('Approved', stats.approvedApplications, '✅', '#10b981')}
-            {renderStatCard('Rejected', stats.rejectedApplications, '❌', '#ef4444')}
+            {renderStatCard('Total Applications', stats.totalApplications, '📋', '#3b82f6', 'All loan requests')}
+            {renderStatCard('Pending Review', stats.pendingApplications, '⏳', '#f59e0b', 'Awaiting review')}
+            {renderStatCard('Approved', stats.approvedApplications, '✅', '#10b981', 'Successfully approved')}
+            {renderStatCard('Rejected', stats.rejectedApplications, '❌', '#ef4444', 'Declined applications')}
           </View>
-        </View>
+        </Animated.View>
 
         {/* Recent Applications */}
-        <View style={styles.applicationsSection}>
+        <Animated.View 
+          style={[
+            styles.applicationsSection,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Recent Applications</Text>
           <View style={styles.applicationsList}>
-            {applications.map(renderApplicationCard)}
+            {applications.map((application, index) => (
+              <Animated.View
+                key={application.id}
+                style={{
+                  opacity: fadeAnim,
+                  transform: [{
+                    translateY: Animated.add(
+                      slideAnim,
+                      new Animated.Value(index * 10)
+                    )
+                  }]
+                }}
+              >
+                {renderApplicationCard(application)}
+              </Animated.View>
+            ))}
           </View>
-        </View>
-      </ScrollView>
+        </Animated.View>
+      </Animated.ScrollView>
+      <BottomNavigation />
     </View>
   );
 }
@@ -252,7 +378,29 @@ export default function BankAgentDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1e293b',
+  },
+  floatingElement: {
+    position: 'absolute',
+    opacity: 0.1,
+  },
+  circle1: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#3b82f6',
+  },
+  square1: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#8b5cf6',
+    transform: [{ rotate: '45deg' }],
+  },
+  circle2: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#06b6d4',
   },
   scrollView: {
     flex: 1,
@@ -261,24 +409,49 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: 'white',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  bankIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  bankIcon: {
+    fontSize: 28,
+  },
+  headerText: {
+    flex: 1,
   },
   greeting: {
     fontSize: 16,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 8,
+    color: 'white',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   verificationBadge: {
     flexDirection: 'row',
@@ -299,12 +472,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#f1f5f9',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   profileIcon: {
     fontSize: 20,
@@ -316,7 +491,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 16,
   },
   statsGrid: {
@@ -325,16 +500,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 20,
     width: '48%',
     borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   statHeader: {
     flexDirection: 'row',
@@ -346,7 +523,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f8fafc',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -359,8 +535,14 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
+    color: 'white',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '400',
   },
   applicationsSection: {
     paddingHorizontal: 20,
@@ -370,14 +552,16 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   applicationCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   applicationHeader: {
     flexDirection: 'row',
@@ -391,12 +575,12 @@ const styles = StyleSheet.create({
   applicantName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 4,
   },
   propertyTitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -424,12 +608,12 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   detailValue: {
     fontSize: 14,
-    color: '#1e293b',
+    color: 'white',
     fontWeight: '600',
   },
   applicationActions: {
@@ -467,12 +651,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   viewButton: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   viewButtonText: {
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 14,
     fontWeight: '600',
   },

@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
+import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 
 const { width, height } = Dimensions.get('window');
@@ -164,7 +164,7 @@ export default function LoanApplication() {
         </View>
       </View>
 
-      <BuyerBottomNav />
+      <BuyerBottomNavigation />
     </View>
   );
 }

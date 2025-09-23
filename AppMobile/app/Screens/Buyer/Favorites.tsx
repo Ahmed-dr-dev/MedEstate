@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   Image,
   Alert,
   StatusBar,
+  Animated,
 } from 'react-native';
 import { router } from 'expo-router';
-import { BuyerBottomNav } from '../../../components/Buyer/BuyerBottomNav';
+import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
 
 interface FavoriteProperty {
   id: string;
@@ -26,6 +27,52 @@ interface FavoriteProperty {
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState<FavoriteProperty[]>([]);
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+  const floatAnim3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Floating animations
+    const createFloatingAnimation = (animValue: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: -20,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: 3000,
+            useNativeDriver: true,
+          }),
+        ]),
+        { iterations: -1 }
+      );
+    };
+
+    setTimeout(() => createFloatingAnimation(floatAnim1, 0).start(), 500);
+    setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
+    setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
+  }, []);
 
   const handleRemoveFavorite = (propertyId: string) => {
     Alert.alert(
@@ -95,14 +142,64 @@ export default function Favorites() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
+      <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       
-      <View style={styles.header}>
-        <Text style={styles.title}>My Favorites</Text>
-        <Text style={styles.subtitle}>
-          {favorites.length} {favorites.length === 1 ? 'property' : 'properties'} saved
-        </Text>
-      </View>
+      {/* Floating Background Elements */}
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle1,
+          {
+            top: 100,
+            right: -40,
+            transform: [{ translateY: floatAnim1 }],
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.square1,
+          {
+            top: 300,
+            left: -30,
+            transform: [{ translateY: floatAnim2 }],
+          }
+        ]} 
+      />
+      <Animated.View 
+        style={[
+          styles.floatingElement,
+          styles.circle2,
+          {
+            bottom: 200,
+            right: -30,
+            transform: [{ translateY: floatAnim3 }],
+          }
+        ]} 
+      />
+      
+      <Animated.View 
+        style={[
+          styles.header,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]}
+      >
+        <View style={styles.headerContent}>
+          <View style={styles.favoritesIconContainer}>
+            <Text style={styles.favoritesIcon}>❤️</Text>
+          </View>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>My Favorites</Text>
+            <Text style={styles.subtitle}>
+              {favorites.length} {favorites.length === 1 ? 'property' : 'properties'} saved
+            </Text>
+          </View>
+        </View>
+      </Animated.View>
 
       {favorites.length === 0 ? (
         <EmptyState />
@@ -116,7 +213,7 @@ export default function Favorites() {
         />
       )}
 
-      <BuyerBottomNav />
+      <BuyerBottomNavigation />
     </View>
   );
 }
@@ -124,37 +221,82 @@ export default function Favorites() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#1e293b',
+  },
+  floatingElement: {
+    position: 'absolute',
+    opacity: 0.1,
+  },
+  circle1: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#3b82f6',
+  },
+  square1: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#8b5cf6',
+    transform: [{ rotate: '45deg' }],
+  },
+  circle2: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#06b6d4',
   },
   header: {
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: 'white',
+    paddingBottom: 30,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  favoritesIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  favoritesIcon: {
+    fontSize: 28,
+  },
+  headerText: {
+    flex: 1,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   favoritesList: {
     paddingHorizontal: 20,
     paddingBottom: 100,
   },
   favoriteCard: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
     position: 'relative',
   },
   propertyContent: {
@@ -165,7 +307,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 12,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   propertyInfo: {
     flex: 1,
@@ -174,14 +316,14 @@ const styles = StyleSheet.create({
   propertyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 6,
     lineHeight: 20,
   },
   propertyPrice: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2563eb',
+    color: '#3b82f6',
     marginBottom: 6,
   },
   locationContainer: {
@@ -195,7 +337,7 @@ const styles = StyleSheet.create({
   },
   propertyLocation: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   propertyDetails: {
     flexDirection: 'row',
@@ -203,8 +345,8 @@ const styles = StyleSheet.create({
   },
   propertyDetail: {
     fontSize: 12,
-    color: '#64748b',
-    backgroundColor: '#f1f5f9',
+    color: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -212,7 +354,7 @@ const styles = StyleSheet.create({
   },
   dateAdded: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   removeButton: {
     position: 'absolute',
@@ -243,19 +385,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: 'white',
     marginBottom: 12,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 16,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
   },
   browseButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#3b82f6',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
