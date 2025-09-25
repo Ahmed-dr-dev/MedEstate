@@ -13,8 +13,12 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-
+import { API_BASE_URL } from '@/constants/api';
+import { getProfileId } from '@/lib/auth';
+import * as ImagePicker from 'expo-image-picker';
+import { useAuth } from '@/contexts/AuthContext';
 interface PropertyFormData {
+  owner_id: string;
   title: string;
   description: string;
   price: string;
@@ -22,13 +26,15 @@ interface PropertyFormData {
   bedrooms: string;
   bathrooms: string;
   area: string;
-  propertyType: string;
+  property_type: string;
   images: string[];
 }
 
 export default function AddProperty() {
   const router = useRouter();
+  const { user } = useAuth();
   const [formData, setFormData] = useState<PropertyFormData>({
+    owner_id: user?.id || '', // Will be set from user context
     title: '',
     description: '',
     price: '',
@@ -36,7 +42,7 @@ export default function AddProperty() {
     bedrooms: '',
     bathrooms: '',
     area: '',
-    propertyType: 'house',
+    property_type: 'house',
     images: [],
   });
 
@@ -56,16 +62,60 @@ export default function AddProperty() {
   };
 
   const handleAddImage = () => {
-    // In a real app, this would open image picker
     Alert.alert(
       'Add Image',
       'Select image source',
       [
-        { text: 'Camera', onPress: () => {} },
-        { text: 'Gallery', onPress: () => {} },
+        { text: 'Camera', onPress: () => pickImage('camera') },
+        { text: 'Gallery', onPress: () => pickImage('gallery') },
         { text: 'Cancel', style: 'cancel' }
       ]
     );
+  };
+
+  const pickImage = async (source: 'camera' | 'gallery') => {
+    try {
+      let result;
+      
+      if (source === 'camera') {
+        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+        if (permissionResult.granted === false) {
+          Alert.alert('Error', 'Camera permission is required');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+      } else {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+          Alert.alert('Error', 'Gallery permission is required');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+          allowsMultipleSelection: true,
+        });
+      }
+
+      if (!result.canceled && result.assets) {
+        const newImages = result.assets.map((asset: any) => asset.uri);
+        
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, ...newImages]
+        }));
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
   };
 
   const handleRemoveImage = (index: number) => {
@@ -114,19 +164,60 @@ export default function AddProperty() {
     return true;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    Alert.alert(
-      'Property Added',
-      'Your property has been successfully added to the marketplace!',
-      [
-        {
-          text: 'OK',
-          onPress: () => router.back()
-        }
-      ]
-    );
+    try {
+      // Get current user's profile ID (mock for now)
+      const profileId = user?.id || ''; // Replace with actual auth
+
+      // Create FormData to send both property data and images
+      const formDataToSend = new FormData();
+      formDataToSend.append('owner_id', profileId);
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('location', formData.location);
+      formDataToSend.append('bedrooms', formData.bedrooms);
+      formDataToSend.append('bathrooms', formData.bathrooms);
+      formDataToSend.append('area', formData.area);
+      formDataToSend.append('property_type', formData.property_type);
+
+      // Add images to FormData
+      for (let i = 0; i < formData.images.length; i++) {
+        const imageUri = formData.images[i];
+        formDataToSend.append('images', {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: `image_${i + 1}.jpg`,
+        } as any);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/properties`, {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        Alert.alert(
+          'Property Added',
+          'Your property has been successfully added to the marketplace!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', result.error || 'Failed to add property');
+      }
+    } catch (error) {
+      console.error('Error adding property:', error);
+      Alert.alert('Error', 'Network error. Please try again.');
+    }
   };
 
   return (
@@ -184,13 +275,13 @@ export default function AddProperty() {
                     key={type.id}
                     style={[
                       styles.typeOption,
-                      formData.propertyType === type.id && styles.selectedType
+                      formData.property_type === type.id && styles.selectedType
                     ]}
-                    onPress={() => handleInputChange('propertyType', type.id)}
+                    onPress={() => handleInputChange('property_type', type.id)}
                   >
                     <Text style={[
                       styles.typeOptionText,
-                      formData.propertyType === type.id && styles.selectedTypeText
+                      formData.property_type === type.id && styles.selectedTypeText
                     ]}>
                       {type.label}
                     </Text>

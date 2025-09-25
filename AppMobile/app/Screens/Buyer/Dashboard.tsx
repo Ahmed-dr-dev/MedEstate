@@ -249,7 +249,7 @@ export default function BuyerDashboard() {
           <View style={styles.statsContainer}>
             {renderStatCard('Saved Properties', stats.savedProperties, '❤️', '#ef4444', 'Properties you\'ve favorited')}
             {renderStatCard('Loan Applications', stats.loanApplications, '💰', '#10b981', 'Applications submitted')}
-            {renderStatCard('Scheduled Visits', stats.scheduledVisits, '📅', '#f59e0b', 'Property visits planned')}
+
           </View>
         </Animated.View>
       </Animated.ScrollView>

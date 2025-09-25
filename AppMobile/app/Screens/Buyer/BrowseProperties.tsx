@@ -11,7 +11,9 @@ import {
   Animated,
 } from 'react-native';
 import { PropertyCard } from '../../../components';
+import { API_BASE_URL } from '@/constants/api';
 import { router } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -20,17 +22,25 @@ interface Property {
   title: string;
   location: string;
   price: number;
-  size: string;
-  type: string;
-  isLiked: boolean;
-  image: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  property_type: string;
   description: string;
-  features: string[];
+  images: string[];
+  owner: {
+    display_name: string;
+    phone: string;
+  };
+  created_at: string;
+  updated_at: string;
 }
 
 export default function BrowseProperties() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [loading, setLoading] = useState(false);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -77,105 +87,51 @@ export default function BrowseProperties() {
     setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
     setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
   }, []);
-  const [properties, setProperties] = useState<Property[]>([
-    {
-      id: '1',
-      title: 'Modern Downtown Condo',
-      location: 'Downtown District',
-      price: 850000,
-      size: '2,500 sq ft',
-      type: 'Condo',
-      isLiked: false,
-      image: '🏢',
-      description: 'Luxury downtown condominium with modern amenities and prime city location.',
-      features: ['Parking', 'Elevator', 'Security', 'High-Speed Internet']
-    },
-    {
-      id: '2',
-      title: 'Suburban Family Home',
-      location: 'Residential Area',
-      price: 1200000,
-      size: '4,200 sq ft',
-      type: 'Single Family',
-      isLiked: true,
-      image: '🏠',
-      description: 'Spacious family home with multiple bedrooms, large backyard, and quiet neighborhood.',
-      features: ['Parking', 'Garden', 'Multiple Rooms', 'Garage']
-    },
-    {
-      id: '3',
-      title: 'Luxury Apartment',
-      location: 'Uptown District',
-      price: 650000,
-      size: '1,800 sq ft',
-      type: 'Apartment',
-      isLiked: false,
-      image: '🏙️',
-      description: 'High-end apartment with premium finishes and stunning city views.',
-      features: ['Parking', 'Balcony', 'Modern Kitchen', 'Gym Access']
-    },
-    {
-      id: '4',
-      title: 'Townhouse',
-      location: 'Historic District',
-      price: 950000,
-      size: '3,100 sq ft',
-      type: 'Townhouse',
-      isLiked: false,
-      image: '🏘️',
-      description: 'Charming townhouse with historic character and modern updates.',
-      features: ['Parking', 'Private Entrance', 'Multiple Floors', 'Garden']
-    },
-    {
-      id: '5',
-      title: 'Penthouse Suite',
-      location: 'Financial District',
-      price: 750000,
-      size: '2,800 sq ft',
-      type: 'Penthouse',
-      isLiked: true,
-      image: '🏗️',
-      description: 'Exclusive penthouse with panoramic city views and premium amenities.',
-      features: ['Parking', 'Rooftop Access', 'Concierge', 'Premium Finishes']
-    },
-    {
-      id: '6',
-      title: 'Beach House',
-      location: 'Coastal Area',
-      price: 580000,
-      size: '2,200 sq ft',
-      type: 'Beach House',
-      isLiked: false,
-      image: '🏖️',
-      description: 'Charming beach house with ocean views and direct beach access.',
-      features: ['Parking', 'Ocean View', 'Private Beach', 'Deck']
+  const [properties, setProperties] = useState<Property[]>([]);
+
+  // Fetch properties from API
+  const fetchProperties = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/properties`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setProperties(result.data);
+      } else {
+        console.error('Error fetching properties:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchProperties();
+  }, []);
 
   const filters = [
     { key: 'all', label: 'All' },
-    { key: 'condo', label: 'Condo' },
-    { key: 'single', label: 'Single Family' },
+    { key: 'house', label: 'House' },
     { key: 'apartment', label: 'Apartment' },
-    { key: 'townhouse', label: 'Townhouse' }
+    { key: 'condo', label: 'Condo' },
+    { key: 'townhouse', label: 'Townhouse' },
+    { key: 'commercial', label: 'Commercial' }
   ];
-
-  const toggleLike = (propertyId: string) => {
-    setProperties(prev => prev.map(prop => 
-      prop.id === propertyId ? { ...prop, isLiked: !prop.isLiked } : prop
-    ));
-  };
 
   const filteredProperties = properties.filter(property => {
     const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          property.location.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = selectedFilter === 'all' || 
-                         property.type.toLowerCase().includes(selectedFilter);
+                         property.property_type === selectedFilter;
     return matchesSearch && matchesFilter;
   });
 
   const handleLike = (id: string) => {
-    toggleLike(id);
+    // TODO: Implement save to saved_properties table
+    console.log('Like property:', id);
   };
 
   const handleView = (id: string) => {
@@ -308,6 +264,7 @@ export default function BrowseProperties() {
                 property={property}
                 onLike={handleLike}
                 onView={handleView}
+                userId={user?.id}
               />
             ))}
           </View>

@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         break;
      
       case 'bank_agent':
-        router.replace('/Screens/BankAgent/LoanReviewDashboard');
+        router.replace('/Screens/BankAgent/Registration');
         break;
       case 'admin':
         router.replace('/Screens/Admin/AdminDashboard');

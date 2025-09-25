@@ -16,27 +16,24 @@ interface Property {
   title: string;
   location: string;
   price: number;
-  size: string;
-  type: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  property_type: string;
   description: string;
-  features: string[];
-  image: string;
-  isLiked: boolean;
-  images?: string[];
-  bedrooms?: number;
-  bathrooms?: number;
-  yearBuilt?: number;
-  agent?: {
-    name: string;
+  images: string[];
+  owner: {
+    display_name: string;
     phone: string;
-    email: string;
   };
+  created_at: string;
+  updated_at: string;
 }
 
 interface PropertyDetailsProps {
   property: Property;
   onLike: (id: string) => void;
-  onContact: (agent: any) => void;
+  onContact: (owner: any) => void;
   onClose: () => void;
 }
 
@@ -77,9 +74,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
             style={styles.likeButton}
             onPress={() => onLike(property.id)}
           >
-            <Text style={[styles.likeIcon, property.isLiked && styles.likedIcon]}>
-              {property.isLiked ? '❤️' : '🤍'}
-            </Text>
+            <Text style={styles.likeIcon}>🤍</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -87,7 +82,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
           </TouchableOpacity>
           
           <View style={styles.propertyTypeBadge}>
-            <Text style={styles.propertyTypeText}>{property.type}</Text>
+            <Text style={styles.propertyTypeText}>{property.property_type.charAt(0).toUpperCase() + property.property_type.slice(1)}</Text>
           </View>
         </View>
 
@@ -97,9 +92,9 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
           <Text style={styles.propertyLocation}>📍 {property.location}</Text>
           
           <View style={styles.priceSection}>
-            <Text style={styles.propertyPrice}>${property.price.toLocaleString()}</Text>
+            <Text style={styles.propertyPrice}>{property.price.toLocaleString()} TND</Text>
             <Text style={styles.pricePerSqft}>
-              ${Math.round(property.price / parseInt(property.size.replace(/[^\d]/g, ''))).toLocaleString()}/sq ft
+              {property.area ? `${Math.round(property.price / property.area).toLocaleString()} TND/m²` : ''}
             </Text>
           </View>
 
@@ -107,63 +102,65 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>📏</Text>
-              <Text style={styles.statLabel}>Size</Text>
-              <Text style={styles.statValue}>{property.size}</Text>
+              <Text style={styles.statLabel}>Area</Text>
+              <Text style={styles.statValue}>{property.area ? `${property.area.toLocaleString()} m²` : 'N/A'}</Text>
             </View>
-            {property.bedrooms && (
-              <View style={styles.statItem}>
-                <Text style={styles.statIcon}>🛏️</Text>
-                <Text style={styles.statLabel}>Bedrooms</Text>
-                <Text style={styles.statValue}>{property.bedrooms}</Text>
-              </View>
-            )}
-            {property.bathrooms && (
-              <View style={styles.statItem}>
-                <Text style={styles.statIcon}>🚿</Text>
-                <Text style={styles.statLabel}>Bathrooms</Text>
-                <Text style={styles.statValue}>{property.bathrooms}</Text>
-              </View>
-            )}
-            {property.yearBuilt && (
-              <View style={styles.statItem}>
-                <Text style={styles.statIcon}>🏗️</Text>
-                <Text style={styles.statLabel}>Year Built</Text>
-                <Text style={styles.statValue}>{property.yearBuilt}</Text>
-              </View>
-            )}
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>🛏️</Text>
+              <Text style={styles.statLabel}>Bedrooms</Text>
+              <Text style={styles.statValue}>{property.bedrooms}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>🚿</Text>
+              <Text style={styles.statLabel}>Bathrooms</Text>
+              <Text style={styles.statValue}>{property.bathrooms}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>🏠</Text>
+              <Text style={styles.statLabel}>Type</Text>
+              <Text style={styles.statValue}>{property.property_type.charAt(0).toUpperCase() + property.property_type.slice(1)}</Text>
+            </View>
           </View>
 
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{property.description}</Text>
+            <Text style={styles.description}>{property.description || 'No description available'}</Text>
           </View>
 
-          {/* Features */}
+          {/* Property Features */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Features</Text>
+            <Text style={styles.sectionTitle}>Property Features</Text>
             <View style={styles.featuresContainer}>
-              {property.features.map((feature, index) => (
-                <View key={index} style={styles.featureTag}>
-                  <Text style={styles.featureText}>✓ {feature}</Text>
+              <View style={styles.featureTag}>
+                <Text style={styles.featureText}>✓ {property.property_type.charAt(0).toUpperCase() + property.property_type.slice(1)}</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Text style={styles.featureText}>✓ {property.bedrooms} Bedrooms</Text>
+              </View>
+              <View style={styles.featureTag}>
+                <Text style={styles.featureText}>✓ {property.bathrooms} Bathrooms</Text>
+              </View>
+              {property.area && (
+                <View style={styles.featureTag}>
+                  <Text style={styles.featureText}>✓ {property.area.toLocaleString()} m²</Text>
                 </View>
-              ))}
+              )}
             </View>
           </View>
 
-          {/* Agent Info */}
-          {property.agent && (
+          {/* Owner Info */}
+          {property.owner && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Contact Agent</Text>
+              <Text style={styles.sectionTitle}>Contact Owner</Text>
               <View style={styles.agentCard}>
                 <View style={styles.agentInfo}>
-                  <Text style={styles.agentName}>{property.agent.name}</Text>
-                  <Text style={styles.agentPhone}>📞 {property.agent.phone}</Text>
-                  <Text style={styles.agentEmail}>✉️ {property.agent.email}</Text>
+                  <Text style={styles.agentName}>{property.owner.display_name}</Text>
+                  <Text style={styles.agentPhone}>📞 {property.owner.phone}</Text>
                 </View>
                 <TouchableOpacity 
                   style={styles.contactButton}
-                  onPress={() => onContact(property.agent)}
+                  onPress={() => onContact(property.owner)}
                 >
                   <Text style={styles.contactButtonText}>Contact</Text>
                 </TouchableOpacity>

@@ -12,7 +12,6 @@ import {
 
 interface LoanSimulatorState {
   propertyValue: string;
-  downPayment: string;
   interestRate: string;
   loanTerm: string;
   includeInsurance: boolean;
@@ -24,8 +23,6 @@ interface SimulationResult {
   monthlyPayment: string;
   totalInterest: string;
   totalPayment: string;
-  downPaymentPercent: string;
-  loanToValue: string;
   monthlyInsurance: string;
   totalMonthlyPayment: string;
 }
@@ -34,7 +31,6 @@ export default function LoanSimulator() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loanData, setLoanData] = useState<LoanSimulatorState>({
     propertyValue: '',
-    downPayment: '',
     interestRate: '6.5',
     loanTerm: '30',
     includeInsurance: false,
@@ -48,17 +44,16 @@ export default function LoanSimulator() {
 
   const steps = [
     { id: 1, title: 'Property Value', description: 'Enter property details' },
-    { id: 2, title: 'Down Payment', description: 'Set your down payment' },
-    { id: 3, title: 'Loan Terms', description: 'Interest rate and term' },
-    { id: 4, title: 'Insurance', description: 'Property insurance options' },
-    { id: 5, title: 'Results', description: 'View your calculations' }
+    { id: 2, title: 'Loan Terms', description: 'Interest rate and term' },
+    { id: 3, title: 'Insurance', description: 'Property insurance options' },
+    { id: 4, title: 'Results', description: 'View your calculations' }
   ];
 
   const updateLoanData = (field: keyof LoanSimulatorState, value: string) => {
     setLoanData(prev => ({ ...prev, [field]: value }));
     
     // Auto-calculate if enabled and we have enough data
-    if (autoCalculate && value && loanData.propertyValue && loanData.downPayment && loanData.interestRate && loanData.loanTerm) {
+    if (autoCalculate && value && loanData.propertyValue && loanData.interestRate && loanData.loanTerm) {
       setTimeout(() => calculateLoan(), 500);
     }
   };
@@ -68,16 +63,14 @@ export default function LoanSimulator() {
       case 1:
         return loanData.propertyValue && parseFloat(loanData.propertyValue) > 0;
       case 2:
-        return loanData.downPayment && parseFloat(loanData.downPayment) > 0;
-      case 3:
         return loanData.interestRate && loanData.loanTerm;
-      case 4:
+      case 3:
         // If insurance is enabled, insurance amount must be provided
         if (loanData.includeInsurance) {
           return loanData.insuranceAmount && parseFloat(loanData.insuranceAmount) > 0;
         }
         return true; // Insurance is optional
-      case 5:
+      case 4:
         return result !== null;
       default:
         return false;
@@ -85,8 +78,8 @@ export default function LoanSimulator() {
   };
 
   const nextStep = () => {
-    if (currentStep < 5) {
-      if (currentStep === 4) {
+    if (currentStep < 4) {
+      if (currentStep === 3) {
         // When moving from insurance step to results, calculate loan first
         calculateLoan();
         // Move to results step after calculation
@@ -107,17 +100,11 @@ export default function LoanSimulator() {
 
   const calculateLoan = () => {
     const propertyValue = parseFloat(loanData.propertyValue);
-    const downPayment = parseFloat(loanData.downPayment);
     const interestRate = parseFloat(loanData.interestRate);
     const loanTerm = parseInt(loanData.loanTerm);
 
-    if (!propertyValue || !downPayment || !interestRate || !loanTerm) {
+    if (!propertyValue || !interestRate || !loanTerm) {
       Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    if (downPayment >= propertyValue) {
-      Alert.alert('Error', 'Down payment cannot be greater than or equal to property value');
       return;
     }
 
@@ -125,7 +112,7 @@ export default function LoanSimulator() {
 
     // Simulate calculation delay
     setTimeout(() => {
-      const principal = propertyValue - downPayment;
+      const principal = propertyValue; // No down payment, full loan amount
       const monthlyRate = interestRate / 100 / 12;
       const numberOfPayments = loanTerm * 12;
 
@@ -145,8 +132,6 @@ export default function LoanSimulator() {
           monthlyPayment: monthlyPayment.toFixed(2),
           totalInterest: totalInterest.toFixed(2),
           totalPayment: totalPayment.toFixed(2),
-          downPaymentPercent: ((downPayment / propertyValue) * 100).toFixed(1),
-          loanToValue: ((principal / propertyValue) * 100).toFixed(1),
           monthlyInsurance: monthlyInsurance.toFixed(2),
           totalMonthlyPayment: totalMonthlyPayment.toFixed(2)
         });
@@ -166,8 +151,6 @@ export default function LoanSimulator() {
           monthlyPayment: monthlyPayment.toFixed(2),
           totalInterest: totalInterest.toFixed(2),
           totalPayment: totalPayment.toFixed(2),
-          downPaymentPercent: ((downPayment / propertyValue) * 100).toFixed(1),
-          loanToValue: ((principal / propertyValue) * 100).toFixed(1),
           monthlyInsurance: monthlyInsurance.toFixed(2),
           totalMonthlyPayment: totalMonthlyPayment.toFixed(2)
         });
@@ -180,7 +163,6 @@ export default function LoanSimulator() {
   const resetCalculator = () => {
     setLoanData({
       propertyValue: '',
-      downPayment: '',
       interestRate: '6.5',
       loanTerm: '30',
       includeInsurance: false,
@@ -201,7 +183,7 @@ export default function LoanSimulator() {
             <Text style={styles.stepContentSubtitle}>Enter the purchase price of the property</Text>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Property Value ($) *</Text>
+              <Text style={styles.inputLabel}>Property Value (TND) *</Text>
               <TextInput
                 style={styles.input}
                 value={loanData.propertyValue}
@@ -217,93 +199,25 @@ export default function LoanSimulator() {
                 style={styles.presetButton}
                 onPress={() => updateLoanData('propertyValue', '500000')}
               >
-                <Text style={styles.presetButtonText}>$500K</Text>
+                <Text style={styles.presetButtonText}>500K TND</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.presetButton}
                 onPress={() => updateLoanData('propertyValue', '750000')}
               >
-                <Text style={styles.presetButtonText}>$750K</Text>
+                <Text style={styles.presetButtonText}>750K TND</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.presetButton}
                 onPress={() => updateLoanData('propertyValue', '1000000')}
               >
-                <Text style={styles.presetButtonText}>$1M</Text>
+                <Text style={styles.presetButtonText}>1M TND</Text>
               </TouchableOpacity>
             </View>
           </View>
         );
 
       case 2:
-        return (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepContentTitle}>Down Payment</Text>
-            <Text style={styles.stepContentSubtitle}>How much will you pay upfront?</Text>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Down Payment ($) *</Text>
-              <TextInput
-                style={styles.input}
-                value={loanData.downPayment}
-                onChangeText={(value) => updateLoanData('downPayment', value)}
-                placeholder="Enter down payment"
-                keyboardType="numeric"
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
-
-            {loanData.propertyValue && loanData.downPayment && (
-              <View style={styles.calculationPreview}>
-                <Text style={styles.calculationPreviewTitle}>Quick Preview</Text>
-                <View style={styles.calculationRow}>
-                  <Text style={styles.calculationLabel}>Down Payment %:</Text>
-                  <Text style={styles.calculationValue}>
-                    {((parseFloat(loanData.downPayment) / parseFloat(loanData.propertyValue)) * 100).toFixed(1)}%
-                  </Text>
-                </View>
-                <View style={styles.calculationRow}>
-                  <Text style={styles.calculationLabel}>Loan Amount:</Text>
-                  <Text style={styles.calculationValue}>
-                    ${(parseFloat(loanData.propertyValue) - parseFloat(loanData.downPayment)).toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            <View style={styles.presetButtons}>
-              <TouchableOpacity 
-                style={styles.presetButton}
-                onPress={() => {
-                  const value = (parseFloat(loanData.propertyValue) * 0.1).toString();
-                  updateLoanData('downPayment', value);
-                }}
-              >
-                <Text style={styles.presetButtonText}>10%</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.presetButton}
-                onPress={() => {
-                  const value = (parseFloat(loanData.propertyValue) * 0.2).toString();
-                  updateLoanData('downPayment', value);
-                }}
-              >
-                <Text style={styles.presetButtonText}>20%</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.presetButton}
-                onPress={() => {
-                  const value = (parseFloat(loanData.propertyValue) * 0.25).toString();
-                  updateLoanData('downPayment', value);
-                }}
-              >
-                <Text style={styles.presetButtonText}>25%</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        );
-
-      case 3:
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepContentTitle}>Loan Terms</Text>
@@ -368,7 +282,7 @@ export default function LoanSimulator() {
           </View>
         );
 
-      case 4:
+      case 3:
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepContentTitle}>Property Insurance</Text>
@@ -424,7 +338,7 @@ export default function LoanSimulator() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Annual Insurance Premium ($)</Text>
+                  <Text style={styles.inputLabel}>Annual Insurance Premium (TND)</Text>
                   <TextInput
                     style={styles.input}
                     value={loanData.insuranceAmount}
@@ -449,7 +363,7 @@ export default function LoanSimulator() {
           </View>
         );
 
-      case 5:
+      case 4:
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepContentTitle}>Your Loan Calculation</Text>
@@ -458,17 +372,17 @@ export default function LoanSimulator() {
             {result ? (
               <View style={styles.resultCard}>
                 <Text style={styles.resultTitle}>Monthly Payment</Text>
-                <Text style={styles.monthlyPaymentAmount}>${result.monthlyPayment}</Text>
+                <Text style={styles.monthlyPaymentAmount}>{result.monthlyPayment} TND</Text>
                 
                 {loanData.includeInsurance && parseFloat(result.monthlyInsurance) > 0 && (
                   <View style={styles.insuranceBreakdown}>
                     <View style={styles.insuranceRow}>
                       <Text style={styles.insuranceLabel}>Monthly Insurance:</Text>
-                      <Text style={styles.insuranceValue}>${result.monthlyInsurance}</Text>
+                      <Text style={styles.insuranceValue}>{result.monthlyInsurance} TND</Text>
                     </View>
                     <View style={styles.totalPaymentRow}>
                       <Text style={styles.totalPaymentLabel}>Total Monthly Payment:</Text>
-                      <Text style={styles.totalPaymentValue}>${result.totalMonthlyPayment}</Text>
+                      <Text style={styles.totalPaymentValue}>{result.totalMonthlyPayment} TND</Text>
                     </View>
                   </View>
                 )}
@@ -477,25 +391,25 @@ export default function LoanSimulator() {
                   <View style={styles.resultItem}>
                     <View style={styles.resultItemContent}>
                       <Text style={styles.resultLabel}>Total Interest</Text>
-                      <Text style={styles.resultValue}>${result.totalInterest}</Text>
+                      <Text style={styles.resultValue}>{result.totalInterest} TND</Text>
                     </View>
                   </View>
                   <View style={styles.resultItem}>
                     <View style={styles.resultItemContent}>
                       <Text style={styles.resultLabel}>Total Payment</Text>
-                      <Text style={styles.resultValue}>${result.totalPayment}</Text>
+                      <Text style={styles.resultValue}>{result.totalPayment} TND</Text>
                     </View>
                   </View>
                   <View style={styles.resultItem}>
                     <View style={styles.resultItemContent}>
-                      <Text style={styles.resultLabel}>Down Payment %</Text>
-                      <Text style={styles.resultValue}>{result.downPaymentPercent}</Text>
+                      <Text style={styles.resultLabel}>Loan Amount</Text>
+                      <Text style={styles.resultValue}>{loanData.propertyValue} TND</Text>
                     </View>
                   </View>
                   <View style={styles.resultItem}>
                     <View style={styles.resultItemContent}>
-                      <Text style={styles.resultLabel}>Loan-to-Value</Text>
-                      <Text style={styles.resultValue}>{result.loanToValue}</Text>
+                      <Text style={styles.resultLabel}>Interest Rate</Text>
+                      <Text style={styles.resultValue}>{loanData.interestRate}%</Text>
                     </View>
                   </View>
                 </View>
@@ -513,26 +427,6 @@ export default function LoanSimulator() {
     }
   };
 
-  const quickPresets = [
-    { label: '20% Down', value: () => {
-      const propertyValue = parseFloat(loanData.propertyValue);
-      if (propertyValue) {
-        updateLoanData('downPayment', (propertyValue * 0.2).toString());
-      }
-    }},
-    { label: '10% Down', value: () => {
-      const propertyValue = parseFloat(loanData.propertyValue);
-      if (propertyValue) {
-        updateLoanData('downPayment', (propertyValue * 0.1).toString());
-      }
-    }},
-    { label: '5% Down', value: () => {
-      const propertyValue = parseFloat(loanData.propertyValue);
-      if (propertyValue) {
-        updateLoanData('downPayment', (propertyValue * 0.05).toString());
-      }
-    }}
-  ];
 
   return (
     <View style={styles.container}>
@@ -612,21 +506,21 @@ export default function LoanSimulator() {
 
         {/* Continue Button */}
         <View style={styles.continueButtonContainer}>
-          {currentStep < 5 ? (
+          {currentStep < 4 ? (
             <TouchableOpacity 
               style={[
-                currentStep === 4 ? styles.calculateButton : styles.continueButton,
-                (!validateStep(currentStep) && currentStep !== 4) && styles.continueButtonDisabled,
+                currentStep === 3 ? styles.calculateButton : styles.continueButton,
+                (!validateStep(currentStep) && currentStep !== 3) && styles.continueButtonDisabled,
                 isCalculating && styles.calculateButtonDisabled
               ]} 
               onPress={nextStep}
-              disabled={(!validateStep(currentStep) && currentStep !== 4) || isCalculating}
+              disabled={(!validateStep(currentStep) && currentStep !== 3) || isCalculating}
             >
               <Text style={[
-                currentStep === 4 ? styles.calculateButtonText : styles.continueButtonText,
-                (!validateStep(currentStep) && currentStep !== 4) && styles.continueButtonTextDisabled
+                currentStep === 3 ? styles.calculateButtonText : styles.continueButtonText,
+                (!validateStep(currentStep) && currentStep !== 3) && styles.continueButtonTextDisabled
               ]}>
-                {currentStep === 4 ? (isCalculating ? 'Calculating...' : 'Calculate Loan') : 'Continue'}
+                {currentStep === 3 ? (isCalculating ? 'Calculating...' : 'Calculate Loan') : 'Continue'}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -643,7 +537,7 @@ export default function LoanSimulator() {
             
             <View style={styles.monthlyPaymentHighlight}>
               <Text style={styles.monthlyPaymentLabel}>Monthly Payment</Text>
-              <Text style={styles.monthlyPaymentAmount}>${result.monthlyPayment}</Text>
+              <Text style={styles.monthlyPaymentAmount}>{result.monthlyPayment} TND</Text>
             </View>
             
             <View style={styles.resultGrid}>
@@ -653,7 +547,7 @@ export default function LoanSimulator() {
                 </View>
                 <View style={styles.resultItemContent}>
                   <Text style={styles.resultLabel}>Total Interest</Text>
-                  <Text style={styles.resultValue}>${result.totalInterest}</Text>
+                  <Text style={styles.resultValue}>{result.totalInterest} TND</Text>
                 </View>
               </View>
               
@@ -663,7 +557,7 @@ export default function LoanSimulator() {
                 </View>
                 <View style={styles.resultItemContent}>
                   <Text style={styles.resultLabel}>Total Payment</Text>
-                  <Text style={styles.resultValue}>${result.totalPayment}</Text>
+                  <Text style={styles.resultValue}>{result.totalPayment} TND</Text>
                 </View>
               </View>
               
@@ -672,8 +566,8 @@ export default function LoanSimulator() {
                   <Text style={styles.resultItemEmoji}>📈</Text>
                 </View>
                 <View style={styles.resultItemContent}>
-                  <Text style={styles.resultLabel}>Down Payment %</Text>
-                  <Text style={styles.resultValue}>{result.downPaymentPercent}%</Text>
+                  <Text style={styles.resultLabel}>Loan Amount</Text>
+                  <Text style={styles.resultValue}>{loanData.propertyValue} TND</Text>
                 </View>
               </View>
               
@@ -682,8 +576,8 @@ export default function LoanSimulator() {
                   <Text style={styles.resultItemEmoji}>🏠</Text>
                 </View>
                 <View style={styles.resultItemContent}>
-                  <Text style={styles.resultLabel}>Loan-to-Value</Text>
-                  <Text style={styles.resultValue}>{result.loanToValue}%</Text>
+                  <Text style={styles.resultLabel}>Interest Rate</Text>
+                  <Text style={styles.resultValue}>{loanData.interestRate}%</Text>
                 </View>
               </View>
             </View>

@@ -9,24 +9,43 @@ import {
   Alert,
   StatusBar,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
+import { API_BASE_URL } from '@/constants/api';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface FavoriteProperty {
+interface SavedProperty {
   id: string;
-  title: string;
-  price: number;
-  location: string;
-  images: string[];
-  bedrooms: number;
-  bathrooms: number;
-  area: number;
-  dateAdded: string;
+  buyer_id: string;
+  property_id: string;
+  created_at: string;
+  property: {
+    id: string;
+    title: string;
+    location: string;
+    price: number;
+    bedrooms: number;
+    bathrooms: number;
+    area: number;
+    property_type: string;
+    description: string;
+    images: string[];
+    owner: {
+      display_name: string;
+      phone: string;
+    };
+    created_at: string;
+    updated_at: string;
+  };
 }
 
 export default function Favorites() {
-  const [favorites, setFavorites] = useState<FavoriteProperty[]>([]);
+  const { user } = useAuth();
+  const [favorites, setFavorites] = useState<SavedProperty[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -34,6 +53,12 @@ export default function Favorites() {
   const floatAnim1 = useRef(new Animated.Value(0)).current;
   const floatAnim2 = useRef(new Animated.Value(0)).current;
   const floatAnim3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchFavorites();
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     // Entrance animations
@@ -74,7 +99,29 @@ export default function Favorites() {
     setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
   }, []);
 
-  const handleRemoveFavorite = (propertyId: string) => {
+  const fetchFavorites = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/properties/save?user_id=${user.id}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setFavorites(result.data);
+      } else {
+        console.error('Error fetching favorites:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveFavorite = async (propertyId: string) => {
+    if (!user?.id) return;
+    
     Alert.alert(
       'Remove from Favorites',
       'Are you sure you want to remove this property from your favorites?',
@@ -83,41 +130,79 @@ export default function Favorites() {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => {
-            setFavorites(favorites.filter(item => item.id !== propertyId));
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_BASE_URL}/properties/save`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  user_id: user.id,
+                  property_id: propertyId
+                })
+              });
+              
+              const result = await response.json();
+              if (result.success && !result.data.is_saved) {
+                setFavorites(favorites.filter(item => item.property_id !== propertyId));
+              }
+            } catch (error) {
+              console.error('Error removing favorite:', error);
+              Alert.alert('Error', 'Failed to remove from favorites');
+            }
           }
         }
       ]
     );
   };
 
-  const renderFavorite = ({ item }: { item: FavoriteProperty }) => (
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
+
+  const renderFavorite = ({ item }: { item: SavedProperty }) => (
     <View style={styles.favoriteCard}>
       <TouchableOpacity
         style={styles.propertyContent}
-        onPress={() => router.push(`/Screens/Buyer/PropertyDetails?id=${item.id}`)}
+        onPress={() => router.push(`/Screens/Buyer/PropertyDetails?id=${item.property.id}`)}
         activeOpacity={0.9}
       >
-        <Image source={{ uri: item.images[0] }} style={styles.propertyImage} />
+        <Image 
+          source={{ 
+            uri: item.property.images && item.property.images.length > 0 
+              ? item.property.images[0] 
+              : 'https://via.placeholder.com/100x100?text=No+Image'
+          }} 
+          style={styles.propertyImage} 
+        />
         <View style={styles.propertyInfo}>
-          <Text style={styles.propertyTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.propertyPrice}>${item.price.toLocaleString()}</Text>
+          <Text style={styles.propertyTitle} numberOfLines={2}>{item.property.title}</Text>
+          <Text style={styles.propertyPrice}>{item.property.price.toLocaleString()} TND</Text>
           <View style={styles.locationContainer}>
             <Text style={styles.locationIcon}>📍</Text>
-            <Text style={styles.propertyLocation}>{item.location}</Text>
+            <Text style={styles.propertyLocation}>{item.property.location}</Text>
           </View>
           <View style={styles.propertyDetails}>
-            <Text style={styles.propertyDetail}>🛏️ {item.bedrooms}</Text>
-            <Text style={styles.propertyDetail}>🚿 {item.bathrooms}</Text>
-            <Text style={styles.propertyDetail}>📐 {item.area} sqft</Text>
+            <Text style={styles.propertyDetail}>🛏️ {item.property.bedrooms}</Text>
+            <Text style={styles.propertyDetail}>🚿 {item.property.bathrooms}</Text>
+            <Text style={styles.propertyDetail}>📐 {item.property.area ? `${item.property.area} m²` : 'N/A'}</Text>
           </View>
-          <Text style={styles.dateAdded}>Added {item.dateAdded}</Text>
+          <Text style={styles.dateAdded}>Added {formatDate(item.created_at)}</Text>
         </View>
       </TouchableOpacity>
       
       <TouchableOpacity
         style={styles.removeButton}
-        onPress={() => handleRemoveFavorite(item.id)}
+        onPress={() => handleRemoveFavorite(item.property.id)}
       >
         <Text style={styles.removeButtonText}>×</Text>
       </TouchableOpacity>
@@ -141,7 +226,12 @@ export default function Favorites() {
   );
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#1e293b', '#334155', '#1e293b']}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
       
       {/* Floating Background Elements */}
@@ -201,7 +291,12 @@ export default function Favorites() {
         </View>
       </Animated.View>
 
-      {favorites.length === 0 ? (
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading your favorites...</Text>
+        </View>
+      ) : favorites.length === 0 ? (
         <EmptyState />
       ) : (
         <FlatList
@@ -210,11 +305,13 @@ export default function Favorites() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.favoritesList}
           showsVerticalScrollIndicator={false}
+          refreshing={loading}
+          onRefresh={fetchFavorites}
         />
       )}
 
       <BuyerBottomNavigation />
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -247,8 +344,9 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    backgroundColor: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
   },
   headerContent: {
     flexDirection: 'row',
@@ -256,121 +354,177 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   favoritesIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginRight: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   favoritesIcon: {
-    fontSize: 28,
+    fontSize: 32,
   },
   headerText: {
     flex: 1,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 32,
+    fontWeight: '800',
     color: 'white',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
   favoritesList: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingBottom: 100,
+    paddingTop: 10,
   },
   favoriteCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 12,
     position: 'relative',
+    backdropFilter: 'blur(10px)',
   },
   propertyContent: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 20,
   },
   propertyImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+    width: 120,
+    height: 120,
+    borderRadius: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   propertyInfo: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 20,
+    justifyContent: 'space-between',
   },
   propertyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: 'white',
-    marginBottom: 6,
-    lineHeight: 20,
+    marginBottom: 8,
+    lineHeight: 24,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   propertyPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#3b82f6',
-    marginBottom: 6,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#10b981',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
   },
   locationIcon: {
-    fontSize: 12,
-    marginRight: 4,
+    fontSize: 14,
+    marginRight: 6,
   },
   propertyLocation: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
   },
   propertyDetails: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   propertyDetail: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginRight: 8,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    fontWeight: '600',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   dateAdded: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontStyle: 'italic',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
   removeButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#ef4444',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   removeButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   emptyContainer: {
     flex: 1,
@@ -379,32 +533,66 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 80,
+    marginBottom: 24,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: 'white',
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   emptyText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
+    lineHeight: 26,
+    marginBottom: 40,
+    fontWeight: '500',
   },
   browseButton: {
     backgroundColor: '#3b82f6',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   browseButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 18,
+    marginTop: 20,
     fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
