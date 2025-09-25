@@ -36,15 +36,10 @@ export default function Index() {
       case 'buyer':
         router.replace('/Screens/Buyer/Dashboard');
         break;
-      case 'seller':
-        router.replace('/Screens/Seller/Dashboard');
-        break;
       case 'bank_agent':
         router.replace('/Screens/BankAgent/LoanReviewDashboard');
         break;
-      case 'admin':
-        router.replace('/Screens/home');
-        break;
+
       default:
         router.replace('/Screens/Buyer/Dashboard');
         break;
