@@ -27,10 +27,6 @@ export default function RootLayout() {
           name="Screens/forgot-password" 
           options={{ title: 'Forgot Password' }}
         />
-        <Stack.Screen 
-          name="Screens/home" 
-          options={{ title: 'Home' }}
-        />
         
         {/* Buyer Screens */}
         <Stack.Screen 
@@ -76,6 +72,24 @@ export default function RootLayout() {
         <Stack.Screen 
           name="Screens/BankAgent/Profile" 
           options={{ title: 'Bank Agent Profile' }}
+        />
+        
+        {/* Admin Screens */}
+        <Stack.Screen 
+          name="Screens/Admin/AdminDashboard" 
+          options={{ title: 'Admin Dashboard' }}
+        />
+        <Stack.Screen 
+          name="Screens/Admin/BankAgentVerification" 
+          options={{ title: 'Bank Agent Verification' }}
+        />
+        <Stack.Screen 
+          name="Screens/Admin/AdminUsers" 
+          options={{ title: 'User Management' }}
+        />
+        <Stack.Screen 
+          name="Screens/Admin/AdminStatsOverview" 
+          options={{ title: 'Statistics Overview' }}
         />
       </Stack>
     </AuthProvider>
