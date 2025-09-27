@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,78 +8,52 @@ import {
   StatusBar,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/constants/api';
 
 interface LoanApplication {
   id: string;
-  propertyTitle: string;
-  bankName: string;
-  amount: number;
+  property_id?: string;
+  applicant_id: string;
+  loan_amount: number;
+  loan_term_years: number;
+  interest_rate?: number;
+  monthly_payment?: number;
+  employment_status: string;
+  annual_income: number;
+  identity_card_image?: string;
+  proof_of_income_image?: string;
+  selected_bank_id?: string;
+  include_insurance: boolean;
+  monthly_insurance_amount?: number;
   status: 'pending' | 'approved' | 'rejected' | 'under_review';
-  submittedDate: string;
-  expectedResponse: string;
-  interestRate?: string;
-  loanTerm?: string;
-  monthlyPayment?: number;
+  submitted_documents: string[];
+  bank_agent_decision?: string;
+  bank_agent_notes?: string;
+  bank_agent_id?: string;
+  created_at: string;
+  updated_at: string;
+  property?: {
+    id: string;
+    title: string;
+    price: number;
+    location: string;
+    images?: string[];
+  };
 }
 
 export default function LoanApplicationResults() {
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedApplication, setSelectedApplication] = useState<LoanApplication | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showActionInfo, setShowActionInfo] = useState(false);
   const [actionInfo, setActionInfo] = useState<{title: string, content: string, type: string} | null>(null);
-  const [applications, setApplications] = useState<LoanApplication[]>([
-    {
-      id: '1',
-      propertyTitle: 'Modern Downtown Condo',
-      bankName: 'First National Bank',
-      amount: 680000,
-      status: 'pending',
-      submittedDate: '2024-01-15',
-      expectedResponse: '2024-01-22',
-      interestRate: '6.2%',
-      loanTerm: '30 years',
-      monthlyPayment: 4167
-    },
-    {
-      id: '2',
-      propertyTitle: 'Suburban Family Home',
-      bankName: 'Metro Bank',
-      amount: 960000,
-      status: 'approved',
-      submittedDate: '2024-01-10',
-      expectedResponse: '2024-01-17',
-      interestRate: '6.5%',
-      loanTerm: '30 years',
-      monthlyPayment: 6067
-    },
-    {
-      id: '3',
-      propertyTitle: 'Luxury Apartment',
-      bankName: 'City Bank',
-      amount: 520000,
-      status: 'under_review',
-      submittedDate: '2024-01-18',
-      expectedResponse: '2024-01-25',
-      interestRate: '6.8%',
-      loanTerm: '30 years',
-      monthlyPayment: 3390
-    },
-    {
-      id: '4',
-      propertyTitle: 'Beach House Villa',
-      bankName: 'Regional Bank',
-      amount: 1200000,
-      status: 'rejected',
-      submittedDate: '2024-01-05',
-      expectedResponse: '2024-01-12',
-      interestRate: '6.0%',
-      loanTerm: '30 years',
-      monthlyPayment: 7195
-    }
-  ]);
+  const [applications, setApplications] = useState<LoanApplication[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedFilter, setSelectedFilter] = useState('all');
 
@@ -90,6 +64,40 @@ export default function LoanApplicationResults() {
     { key: 'under_review', label: 'Under Review' },
     { key: 'rejected', label: 'Rejected' }
   ];
+
+  // Fetch loan applications on component mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchLoanApplications();
+    }
+  }, [user?.id]);
+
+  const fetchLoanApplications = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/loan-applications?applicant_id=${user.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && Array.isArray(result.data)) {
+        setApplications(result.data);
+      } else {
+        console.error('API response error:', result);
+        Alert.alert('Error', result.error || 'Failed to fetch loan applications');
+      }
+    } catch (error) {
+      console.error('Error fetching loan applications:', error);
+      Alert.alert('Error', 'Failed to fetch loan applications. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredApplications = selectedFilter === 'all' 
     ? applications 
@@ -192,33 +200,35 @@ export default function LoanApplicationResults() {
 
   const handleActionPress = (actionType: string, application: LoanApplication) => {
     let info = { title: '', content: '', type: actionType };
+    const propertyTitle = application.property?.title || 'Property';
+    const bankName = getBankName(application.selected_bank_id);
     
     switch (actionType) {
       case 'approved':
         info = {
           title: 'Approval Letter Details',
-          content: `Congratulations! Your loan application for ${application.propertyTitle} has been approved by ${application.bankName}.\n\nApproval Details:\n• Loan Amount: $${application.amount.toLocaleString()}\n• Interest Rate: ${application.interestRate}\n• Monthly Payment: $${application.monthlyPayment?.toLocaleString()}\n• Loan Term: ${application.loanTerm}\n\nNext Steps:\n1. Review the approval letter\n2. Sign the loan documents\n3. Schedule closing date\n4. Prepare down payment\n\nYour loan officer will contact you within 2 business days to proceed with the closing process.`,
+          content: `Congratulations! Your loan application for ${propertyTitle} has been approved.\n\nApproval Details:\n• Loan Amount: ${application.loan_amount.toLocaleString()} د.ت\n• Interest Rate: ${application.interest_rate ? (application.interest_rate * 100).toFixed(1) : 'N/A'}%\n• Monthly Payment: ${application.monthly_payment?.toLocaleString()} د.ت\n• Loan Term: ${application.loan_term_years} years\n\nBank Agent Notes:\n${application.bank_agent_notes || 'No additional notes provided.'}\n\nNext Steps:\n1. Review the approval letter\n2. Sign the loan documents\n3. Schedule closing date\n4. Prepare down payment\n\nYour loan officer will contact you within 2 business days to proceed with the closing process.`,
           type: 'approved'
         };
         break;
       case 'rejected':
         info = {
           title: 'Rejection Details',
-          content: `Unfortunately, your loan application for ${application.propertyTitle} was not approved by ${application.bankName}.\n\nRejection Reasons:\n• Credit score below minimum requirement (Current: 680, Required: 720)\n• Debt-to-income ratio too high (Current: 45%, Maximum: 43%)\n• Insufficient employment history (Required: 2 years, Current: 1.5 years)\n\nRecommendations:\n1. Improve your credit score by paying down existing debt\n2. Reduce monthly debt payments\n3. Maintain stable employment for 6 more months\n4. Consider a smaller loan amount\n\nYou can reapply after addressing these issues. Our team is available to help you improve your application.`,
+          content: `Unfortunately, your loan application for ${propertyTitle} was not approved.\n\nRejection Reasons:\n${application.bank_agent_notes || '• Credit score below minimum requirement\n• Debt-to-income ratio too high\n• Insufficient employment history'}\n\nRecommendations:\n1. Improve your credit score by paying down existing debt\n2. Reduce monthly debt payments\n3. Maintain stable employment for 6 more months\n4. Consider a smaller loan amount\n\nYou can reapply after addressing these issues. Our team is available to help you improve your application.`,
           type: 'rejected'
         };
         break;
       case 'pending':
         info = {
           title: 'Application Progress',
-          content: `Your loan application for ${application.propertyTitle} is currently being processed by ${application.bankName}.\n\nCurrent Status:\n• Application submitted: ${application.submittedDate}\n• Initial review: Completed\n• Document verification: In progress\n• Credit check: Completed\n• Property appraisal: Scheduled\n\nExpected Timeline:\n• Document review: 2-3 business days\n• Property appraisal: 5-7 business days\n• Final decision: ${application.expectedResponse}\n\nWhat's Next:\n• Our team will contact you if additional documents are needed\n• You'll receive updates via email and SMS\n• Final decision will be communicated by ${application.expectedResponse}\n\nYou can track your application status in real-time through our online portal.`,
+          content: `Your loan application for ${propertyTitle} is currently being processed.\n\nCurrent Status:\n• Application submitted: ${new Date(application.created_at).toLocaleDateString()}\n• Initial review: Completed\n• Document verification: In progress\n• Credit check: Completed\n• Property appraisal: Scheduled\n\nExpected Timeline:\n• Document review: 2-3 business days\n• Property appraisal: 5-7 business days\n• Final decision: Within 7-10 business days\n\nWhat's Next:\n• Our team will contact you if additional documents are needed\n• You'll receive updates via email and SMS\n• Final decision will be communicated within 7-10 business days\n\nYou can track your application status in real-time through our online portal.`,
           type: 'pending'
         };
         break;
       case 'under_review':
         info = {
           title: 'Bank Contact Information',
-          content: `Contact ${application.bankName} for your loan application regarding ${application.propertyTitle}.\n\nBank Contact Details:\n• Loan Officer: Sarah Johnson\n• Direct Phone: (555) 123-4567\n• Email: sarah.johnson@${application.bankName.toLowerCase().replace(/\s+/g, '')}.com\n• Office Hours: Monday-Friday, 9 AM - 5 PM\n\nApplication Reference:\n• Application ID: LA-${application.id.padStart(6, '0')}\n• Property: ${application.propertyTitle}\n• Loan Amount: $${application.amount.toLocaleString()}\n\nWhat to Discuss:\n• Current application status\n• Required documentation\n• Timeline updates\n• Any questions or concerns\n\nPlease have your application reference number ready when calling. The loan officer will have access to your complete application file.`,
+          content: `Contact the bank for your loan application regarding ${propertyTitle}.\n\nApplication Reference:\n• Application ID: LA-${application.id.slice(-6)}\n• Property: ${propertyTitle}\n• Loan Amount: ${application.loan_amount.toLocaleString()} د.ت\n• Bank Agent ID: ${application.bank_agent_id}\n\nWhat to Discuss:\n• Current application status\n• Required documentation\n• Timeline updates\n• Any questions or concerns\n\nPlease have your application reference number ready when calling. The loan officer will have access to your complete application file.`,
           type: 'under_review'
         };
         break;
@@ -226,6 +236,15 @@ export default function LoanApplicationResults() {
     
     setActionInfo(info);
     setShowActionInfo(true);
+  };
+
+  const getBankName = (bankId?: string) => {
+    const bankMap: { [key: string]: string } = {
+      '550e8400-e29b-41d4-a716-446655440001': 'First National Bank',
+      '550e8400-e29b-41d4-a716-446655440002': 'Metro Bank',
+      '550e8400-e29b-41d4-a716-446655440003': 'City Bank'
+    };
+    return bankMap[bankId || ''] || 'Unknown Bank';
   };
 
   const renderApplicationCard = (application: LoanApplication) => (
@@ -236,8 +255,8 @@ export default function LoanApplicationResults() {
     >
       <View style={styles.applicationHeader}>
         <View style={styles.applicationInfo}>
-          <Text style={styles.applicationProperty}>{application.propertyTitle}</Text>
-          <Text style={styles.applicationBank}>{application.bankName}</Text>
+          <Text style={styles.applicationProperty}>{application.property?.title || 'Property'}</Text>
+          <Text style={styles.applicationBank}>{getBankName(application.selected_bank_id)}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(application.status) + '20' }]}>
           <Text style={styles.statusIcon}>{getStatusIcon(application.status)}</Text>
@@ -254,17 +273,17 @@ export default function LoanApplicationResults() {
       <View style={styles.applicationDetails}>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Loan Amount:</Text>
-          <Text style={styles.detailValue}>${application.amount.toLocaleString()}</Text>
+          <Text style={styles.detailValue}>{application.loan_amount.toLocaleString()} د.ت</Text>
         </View>
-        {application.monthlyPayment && (
+        {application.monthly_payment && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Monthly Payment:</Text>
-            <Text style={styles.detailValue}>${application.monthlyPayment.toLocaleString()}</Text>
+            <Text style={styles.detailValue}>{application.monthly_payment.toLocaleString()} د.ت</Text>
           </View>
         )}
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Submitted:</Text>
-          <Text style={styles.detailValue}>{application.submittedDate}</Text>
+          <Text style={styles.detailValue}>{new Date(application.created_at).toLocaleDateString()}</Text>
         </View>
       </View>
 
@@ -330,7 +349,12 @@ export default function LoanApplicationResults() {
             {selectedFilter === 'all' ? 'All Applications' : `${selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1)} Applications`}
           </Text>
           
-          {filteredApplications.length > 0 ? (
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#3b82f6" />
+              <Text style={styles.loadingText}>Loading applications...</Text>
+            </View>
+          ) : filteredApplications.length > 0 ? (
             filteredApplications.map(renderApplicationCard)
           ) : (
             renderEmptyState()
@@ -362,8 +386,8 @@ export default function LoanApplicationResults() {
 
                 <ScrollView style={styles.modalBody}>
                   <View style={styles.modalPropertyInfo}>
-                    <Text style={styles.modalPropertyTitle}>{selectedApplication.propertyTitle}</Text>
-                    <Text style={styles.modalBankName}>{selectedApplication.bankName}</Text>
+                    <Text style={styles.modalPropertyTitle}>{selectedApplication.property?.title || 'Property'}</Text>
+                    <Text style={styles.modalBankName}>{getBankName(selectedApplication.selected_bank_id)}</Text>
                     <View style={[styles.modalStatusBadge, { backgroundColor: getStatusColor(selectedApplication.status) + '20' }]}>
                       <Text style={styles.modalStatusIcon}>{getStatusIcon(selectedApplication.status)}</Text>
                       <Text style={[styles.modalStatusText, { color: getStatusColor(selectedApplication.status) }]}>
@@ -376,39 +400,44 @@ export default function LoanApplicationResults() {
                     <Text style={styles.modalSectionTitle}>Loan Information</Text>
                     <View style={styles.modalDetailRow}>
                       <Text style={styles.modalDetailLabel}>Loan Amount:</Text>
-                      <Text style={styles.modalDetailValue}>${selectedApplication.amount.toLocaleString()}</Text>
+                      <Text style={styles.modalDetailValue}>{selectedApplication.loan_amount.toLocaleString()} د.ت</Text>
                     </View>
-                    {selectedApplication.monthlyPayment && (
+                    {selectedApplication.monthly_payment && (
                       <View style={styles.modalDetailRow}>
                         <Text style={styles.modalDetailLabel}>Monthly Payment:</Text>
-                        <Text style={styles.modalDetailValue}>${selectedApplication.monthlyPayment.toLocaleString()}</Text>
+                        <Text style={styles.modalDetailValue}>{selectedApplication.monthly_payment.toLocaleString()} د.ت</Text>
                       </View>
                     )}
-                    {selectedApplication.interestRate && (
+                    {selectedApplication.interest_rate && (
                       <View style={styles.modalDetailRow}>
                         <Text style={styles.modalDetailLabel}>Interest Rate:</Text>
-                        <Text style={styles.modalDetailValue}>{selectedApplication.interestRate}</Text>
+                        <Text style={styles.modalDetailValue}>{(selectedApplication.interest_rate * 100).toFixed(1)}%</Text>
                       </View>
                     )}
-                    {selectedApplication.loanTerm && (
-                      <View style={styles.modalDetailRow}>
-                        <Text style={styles.modalDetailLabel}>Loan Term:</Text>
-                        <Text style={styles.modalDetailValue}>{selectedApplication.loanTerm}</Text>
-                      </View>
-                    )}
+                    <View style={styles.modalDetailRow}>
+                      <Text style={styles.modalDetailLabel}>Loan Term:</Text>
+                      <Text style={styles.modalDetailValue}>{selectedApplication.loan_term_years} years</Text>
+                    </View>
                   </View>
 
                   <View style={styles.modalDetailsSection}>
                     <Text style={styles.modalSectionTitle}>Application Timeline</Text>
                     <View style={styles.modalDetailRow}>
                       <Text style={styles.modalDetailLabel}>Submitted:</Text>
-                      <Text style={styles.modalDetailValue}>{selectedApplication.submittedDate}</Text>
+                      <Text style={styles.modalDetailValue}>{new Date(selectedApplication.created_at).toLocaleDateString()}</Text>
                     </View>
                     <View style={styles.modalDetailRow}>
-                      <Text style={styles.modalDetailLabel}>Expected Response:</Text>
-                      <Text style={styles.modalDetailValue}>{selectedApplication.expectedResponse}</Text>
+                      <Text style={styles.modalDetailLabel}>Last Updated:</Text>
+                      <Text style={styles.modalDetailValue}>{new Date(selectedApplication.updated_at).toLocaleDateString()}</Text>
                     </View>
                   </View>
+
+                  {selectedApplication.bank_agent_notes && (
+                    <View style={styles.modalDetailsSection}>
+                      <Text style={styles.modalSectionTitle}>Bank Agent Notes</Text>
+                      <Text style={styles.modalDetailValue}>{selectedApplication.bank_agent_notes}</Text>
+                    </View>
+                  )}
 
                   <View style={styles.modalStatusMessage}>
                     <Text style={styles.modalStatusMessageText}>{getStatusMessage(selectedApplication.status)}</Text>
@@ -773,6 +802,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#94a3b8',
+    fontSize: 16,
+    marginTop: 12,
+  },
   // Modal Styles
   modalOverlay: {
     flex: 1,
@@ -931,3 +969,4 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
 });
+

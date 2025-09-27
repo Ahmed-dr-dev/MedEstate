@@ -61,19 +61,21 @@ export default function NewLoanApplication() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
   
-  // Form data
-  const [loanAmount, setLoanAmount] = useState('');
-  const [loanTerm, setLoanTerm] = useState('');
-  const [employmentStatus, setEmploymentStatus] = useState('');
-  const [annualIncome, setAnnualIncome] = useState('');
-  const [identityCard, setIdentityCard] = useState<string | null>(null);
-  const [proofOfIncome, setProofOfIncome] = useState<string | null>(null);
-  const [includeInsurance, setIncludeInsurance] = useState(false);
-  const [monthlyInsuranceAmount, setMonthlyInsuranceAmount] = useState('');
+  // Form data - standardized object
+  const [formData, setFormData] = useState({
+    loanAmount: '',
+    loanTerm: '',
+    employmentStatus: '',
+    annualIncome: '',
+    identityCard: null as string | null,
+    proofOfIncome: null as string | null,
+    includeInsurance: false,
+    monthlyInsuranceAmount: ''
+  });
 
   const banks: Bank[] = [
     {
-      id: '1',
+      id: 'f78cba6f-0328-4d03-ba15-90ef2133d3f5',
       name: 'First National Bank',
       logo: '🏦',
       interestRate: '6.2%',
@@ -84,7 +86,7 @@ export default function NewLoanApplication() {
       verificationStatus: 'verified'
     },
     {
-      id: '2',
+      id: '550e8400-e29b-41d4-a716-446655440002',
       name: 'Metro Bank',
       logo: '🏛️',
       interestRate: '6.5%',
@@ -95,7 +97,7 @@ export default function NewLoanApplication() {
       verificationStatus: 'verified'
     },
     {
-      id: '3',
+      id: '550e8400-e29b-41d4-a716-446655440003',
       name: 'City Bank',
       logo: '🏢',
       interestRate: '6.8%',
@@ -147,7 +149,7 @@ export default function NewLoanApplication() {
 
   const handlePropertySelect = (property: Property) => {
     setSelectedProperty(property);
-    setLoanAmount(property.price.toString());
+    setFormData(prev => ({ ...prev, loanAmount: property.price.toString() }));
     setShowPropertySelection(false);
   };
 
@@ -176,9 +178,9 @@ export default function NewLoanApplication() {
 
       if (!result.canceled && result.assets[0]) {
         if (type === 'identity') {
-          setIdentityCard(result.assets[0].uri);
+          setFormData(prev => ({ ...prev, identityCard: result.assets[0].uri }));
         } else {
-          setProofOfIncome(result.assets[0].uri);
+          setFormData(prev => ({ ...prev, proofOfIncome: result.assets[0].uri }));
         }
       }
     } catch (error) {
@@ -190,14 +192,14 @@ export default function NewLoanApplication() {
   const validateStep = (step: number) => {
     switch (step) {
       case 1:
-        return selectedProperty !== null && loanAmount !== '' && loanTerm !== '';
+        return selectedProperty !== null && formData.loanAmount !== '' && formData.loanTerm !== '';
       case 2:
-        return employmentStatus !== '' && annualIncome !== '' && identityCard !== null && proofOfIncome !== null;
+        return formData.employmentStatus !== '' && formData.annualIncome !== '' && formData.identityCard !== null && formData.proofOfIncome !== null;
       case 3:
         return selectedBank !== null;
       case 4:
-        if (includeInsurance) {
-          return monthlyInsuranceAmount !== '' && parseFloat(monthlyInsuranceAmount) > 0;
+        if (formData.includeInsurance) {
+          return formData.monthlyInsuranceAmount !== '' && parseFloat(formData.monthlyInsuranceAmount) > 0;
         }
         return true;
       case 5:
@@ -234,9 +236,9 @@ export default function NewLoanApplication() {
 
     try {
       // Calculate monthly payment
-      const loanAmountNum = parseFloat(loanAmount);
+      const loanAmountNum = parseFloat(formData.loanAmount);
       const interestRate = selectedBank ? parseFloat(selectedBank.interestRate.replace('%', '')) : 6.5;
-      const loanTermYears = parseInt(loanTerm);
+      const loanTermYears = parseInt(formData.loanTerm);
       
       const monthlyRate = interestRate / 100 / 12;
       const numberOfPayments = loanTermYears * 12;
@@ -245,60 +247,60 @@ export default function NewLoanApplication() {
 
       // Prepare documents array
       const submittedDocuments = [];
-      if (employmentStatus) {
-        submittedDocuments.push(`Employment: ${employmentStatus}`);
+      if (formData.employmentStatus) {
+        submittedDocuments.push(`Employment: ${formData.employmentStatus}`);
       }
-      if (identityCard) {
+      if (formData.identityCard) {
         submittedDocuments.push(`Identity Card: Uploaded`);
       }
-      if (proofOfIncome) {
+      if (formData.proofOfIncome) {
         submittedDocuments.push(`Proof of Income: Uploaded`);
       }
-      if (includeInsurance && monthlyInsuranceAmount) {
-        submittedDocuments.push(`Insurance: ${monthlyInsuranceAmount} د.ت/month`);
+      if (formData.includeInsurance && formData.monthlyInsuranceAmount) {
+        submittedDocuments.push(`Insurance: ${formData.monthlyInsuranceAmount} د.ت/month`);
       }
 
       // Create FormData for file upload
-      const formData = new FormData();
+      const submitFormData = new FormData();
       
       // Add all form fields
-      formData.append('applicant_id', user.id);
-      formData.append('property_id', selectedProperty?.id || '');
-      formData.append('loan_amount', loanAmountNum.toFixed(2));
-      formData.append('loan_term_years', loanTerm);
-      formData.append('interest_rate', (interestRate / 100).toFixed(4));
-      formData.append('monthly_payment', monthlyPayment.toFixed(2));
-      formData.append('employment_status', employmentStatus);
-      formData.append('annual_income', annualIncome);
-      formData.append('selected_bank_id', selectedBank?.id || '');
-      formData.append('include_insurance', includeInsurance.toString());
-      if (includeInsurance && monthlyInsuranceAmount) {
-        formData.append('monthly_insurance_amount', monthlyInsuranceAmount);
+      submitFormData.append('applicant_id', user.id);
+      submitFormData.append('property_id', selectedProperty?.id || '');
+      submitFormData.append('loan_amount', loanAmountNum.toFixed(2));
+      submitFormData.append('loan_term_years', formData.loanTerm);
+      submitFormData.append('interest_rate', (interestRate / 100).toFixed(4));
+      submitFormData.append('monthly_payment', monthlyPayment.toFixed(2));
+      submitFormData.append('employment_status', formData.employmentStatus);
+      submitFormData.append('annual_income', formData.annualIncome);
+      submitFormData.append('selected_bank_id', selectedBank?.id || '');
+      submitFormData.append('include_insurance', formData.includeInsurance.toString());
+      if (formData.includeInsurance && formData.monthlyInsuranceAmount) {
+        submitFormData.append('monthly_insurance_amount', formData.monthlyInsuranceAmount);
       }
 
       // Add files if they exist
-      if (identityCard) {
-        formData.append('identity_card', {
-          uri: identityCard,
+      if (formData.identityCard) {
+        submitFormData.append('identity_card', {
+          uri: formData.identityCard,
           type: 'image/jpeg',
           name: 'identity_card.jpg'
         } as any);
       }
       
-      if (proofOfIncome) {
-        formData.append('proof_of_income', {
-          uri: proofOfIncome,
+      if (formData.proofOfIncome) {
+        submitFormData.append('proof_of_income', {
+          uri: formData.proofOfIncome,
           type: 'image/jpeg',
           name: 'proof_of_income.jpg'
         } as any);
       }
-
+console.log(submitFormData);
       const response = await fetch(`${API_BASE_URL}/loan-applications`, {
         method: 'POST',
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        body: formData
+        body: submitFormData
       });
 
       const result = await response.json();
@@ -381,8 +383,8 @@ export default function NewLoanApplication() {
               <Text style={styles.inputLabel}>Loan Amount (د.ت) *</Text>
               <TextInput
                 style={styles.input}
-                value={loanAmount}
-                onChangeText={setLoanAmount}
+                value={formData.loanAmount}
+                onChangeText={(value) => setFormData(prev => ({ ...prev, loanAmount: value }))}
                 placeholder="Enter loan amount"
                 keyboardType="numeric"
                 placeholderTextColor="#94a3b8"
@@ -397,13 +399,13 @@ export default function NewLoanApplication() {
                     key={term}
                     style={[
                       styles.radioOption,
-                      loanTerm === term && styles.radioOptionSelected
+                      formData.loanTerm === term && styles.radioOptionSelected
                     ]}
-                    onPress={() => setLoanTerm(term)}
+                    onPress={() => setFormData(prev => ({ ...prev, loanTerm: term }))}
                   >
                     <Text style={[
                       styles.radioText,
-                      loanTerm === term && styles.radioTextSelected
+                      formData.loanTerm === term && styles.radioTextSelected
                     ]}>
                       {term} years
                     </Text>
@@ -428,13 +430,13 @@ export default function NewLoanApplication() {
                     key={status}
                     style={[
                       styles.radioOption,
-                      employmentStatus === status && styles.radioOptionSelected
+                      formData.employmentStatus === status && styles.radioOptionSelected
                     ]}
-                    onPress={() => setEmploymentStatus(status)}
+                    onPress={() => setFormData(prev => ({ ...prev, employmentStatus: status }))}
                   >
                     <Text style={[
                       styles.radioText,
-                      employmentStatus === status && styles.radioTextSelected
+                      formData.employmentStatus === status && styles.radioTextSelected
                     ]}>
                       {status}
                     </Text>
@@ -447,8 +449,8 @@ export default function NewLoanApplication() {
               <Text style={styles.inputLabel}>Annual Income (د.ت) *</Text>
               <TextInput
                 style={styles.input}
-                value={annualIncome}
-                onChangeText={setAnnualIncome}
+                value={formData.annualIncome}
+                onChangeText={(value) => setFormData(prev => ({ ...prev, annualIncome: value }))}
                 placeholder="Enter annual income"
                 keyboardType="numeric"
                 placeholderTextColor="#94a3b8"
@@ -461,8 +463,8 @@ export default function NewLoanApplication() {
                 style={styles.fileUploadButton}
                 onPress={() => pickImage('identity')}
               >
-                {identityCard ? (
-                  <Image source={{ uri: identityCard }} style={styles.uploadedImage} />
+                {formData.identityCard ? (
+                  <Image source={{ uri: formData.identityCard }} style={styles.uploadedImage} />
                 ) : (
                   <>
                     <Text style={styles.fileUploadIcon}>📄</Text>
@@ -478,8 +480,8 @@ export default function NewLoanApplication() {
                 style={styles.fileUploadButton}
                 onPress={() => pickImage('income')}
               >
-                {proofOfIncome ? (
-                  <Image source={{ uri: proofOfIncome }} style={styles.uploadedImage} />
+                {formData.proofOfIncome ? (
+                  <Image source={{ uri: formData.proofOfIncome }} style={styles.uploadedImage} />
                 ) : (
                   <>
                     <Text style={styles.fileUploadIcon}>💰</Text>
@@ -545,24 +547,24 @@ export default function NewLoanApplication() {
             <View style={styles.inputGroup}>
               <TouchableOpacity 
                 style={styles.insuranceToggle}
-                onPress={() => setIncludeInsurance(!includeInsurance)}
+                onPress={() => setFormData(prev => ({ ...prev, includeInsurance: !prev.includeInsurance }))}
               >
                 <View style={styles.toggleRow}>
                   <Text style={styles.toggleLabel}>Include Property Insurance</Text>
-                  <View style={[styles.toggleSwitch, includeInsurance && styles.toggleSwitchActive]}>
-                    <View style={[styles.toggleThumb, includeInsurance && styles.toggleThumbActive]} />
+                  <View style={[styles.toggleSwitch, formData.includeInsurance && styles.toggleSwitchActive]}>
+                    <View style={[styles.toggleThumb, formData.includeInsurance && styles.toggleThumbActive]} />
                   </View>
                 </View>
               </TouchableOpacity>
             </View>
 
-            {includeInsurance && (
+            {formData.includeInsurance && (
               <View style={styles.inputGroup}>
                  <Text style={styles.inputLabel}>Monthly Insurance Payment (د.ت)</Text>
                 <TextInput
                   style={styles.input}
-                  value={monthlyInsuranceAmount}
-                  onChangeText={setMonthlyInsuranceAmount}
+                  value={formData.monthlyInsuranceAmount}
+                  onChangeText={(value) => setFormData(prev => ({ ...prev, monthlyInsuranceAmount: value }))}
                   placeholder="Enter monthly insurance amount"
                   keyboardType="numeric"
                   placeholderTextColor="#64748b"
@@ -597,11 +599,11 @@ export default function NewLoanApplication() {
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Loan Amount:</Text>
-                <Text style={styles.reviewValue}>{loanAmount} د.ت</Text>
+                <Text style={styles.reviewValue}>{formData.loanAmount} د.ت</Text>
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Loan Term:</Text>
-                <Text style={styles.reviewValue}>{loanTerm} years</Text>
+                <Text style={styles.reviewValue}>{formData.loanTerm} years</Text>
               </View>
             </View>
 
@@ -609,17 +611,17 @@ export default function NewLoanApplication() {
               <Text style={styles.reviewSectionTitle}>Financial Information</Text>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Employment:</Text>
-                <Text style={styles.reviewValue}>{employmentStatus}</Text>
+                <Text style={styles.reviewValue}>{formData.employmentStatus}</Text>
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Annual Income:</Text>
-                <Text style={styles.reviewValue}>{annualIncome} د.ت</Text>
+                <Text style={styles.reviewValue}>{formData.annualIncome} د.ت</Text>
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Identity Card:</Text>
                 <View style={styles.reviewImageContainer}>
-                  {identityCard ? (
-                    <Image source={{ uri: identityCard }} style={styles.reviewImage} />
+                  {formData.identityCard ? (
+                    <Image source={{ uri: formData.identityCard }} style={styles.reviewImage} />
                   ) : (
                     <Text style={styles.reviewValue}>Not uploaded</Text>
                   )}
@@ -628,8 +630,8 @@ export default function NewLoanApplication() {
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Proof of Income:</Text>
                 <View style={styles.reviewImageContainer}>
-                  {proofOfIncome ? (
-                    <Image source={{ uri: proofOfIncome }} style={styles.reviewImage} />
+                  {formData.proofOfIncome ? (
+                    <Image source={{ uri: formData.proofOfIncome }} style={styles.reviewImage} />
                   ) : (
                     <Text style={styles.reviewValue}>Not uploaded</Text>
                   )}
@@ -649,16 +651,16 @@ export default function NewLoanApplication() {
               </View>
             </View>
 
-            {includeInsurance && (
+            {formData.includeInsurance && (
               <View style={styles.reviewCard}>
                 <Text style={styles.reviewSectionTitle}>Insurance Information</Text>
                 <View style={styles.reviewRow}>
                   <Text style={styles.reviewLabel}>Monthly Insurance:</Text>
-                   <Text style={styles.reviewValue}>{monthlyInsuranceAmount} د.ت</Text>
+                   <Text style={styles.reviewValue}>{formData.monthlyInsuranceAmount} د.ت</Text>
                 </View>
                 <View style={styles.reviewRow}>
                   <Text style={styles.reviewLabel}>Annual Insurance:</Text>
-                   <Text style={styles.reviewValue}>{monthlyInsuranceAmount ? (parseFloat(monthlyInsuranceAmount) * 12).toFixed(0) : '0'} د.ت</Text>
+                   <Text style={styles.reviewValue}>{formData.monthlyInsuranceAmount ? (parseFloat(formData.monthlyInsuranceAmount) * 12).toFixed(0) : '0'} د.ت</Text>
                 </View>
               </View>
             )}

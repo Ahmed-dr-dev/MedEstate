@@ -12,6 +12,7 @@ export interface User {
   display_name: string;
   phone?: string;
   role: UserRole;
+  registration_completed?: boolean;
 }
 
 export interface Session {
@@ -30,6 +31,7 @@ interface AuthContextType {
   clearAllData: () => Promise<void>;
   navigateToRoleHome: () => void;
   validateSession: () => Promise<boolean>;
+  updateRegistrationStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,10 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAuthenticated(true);
           console.log('✅ AUTH - Session is valid, user authenticated');
           
-          // Auto-redirect to role dashboard
-          setTimeout(() => {
-            redirectToRoleDashboard(userData.role);
-          }, 100);
+          // User is authenticated, navigation will be handled by the app
+          console.log('✅ AUTH - User authenticated, ready for navigation');
         } else {
           // Session expired, clear storage and sign out
           console.log('⚠️ AUTH - Session expired, clearing storage');
@@ -131,14 +131,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const redirectToRoleDashboard = (userRole: UserRole) => {
+  const redirectToRoleDashboard = (userRole: UserRole, userData?: User) => {
     switch (userRole) {
       case 'buyer':
         router.replace('/Screens/Buyer/Dashboard');
         break;
      
       case 'bank_agent':
-        router.replace('/Screens/BankAgent/Registration');
+        // Check if bank agent has completed registration
+        if (userData?.registration_completed) {
+          router.replace('/Screens/BankAgent/Dashboard');
+        } else {
+          router.replace('/Screens/BankAgent/Registration');
+        }
         break;
       case 'admin':
         router.replace('/Screens/Admin/AdminDashboard');
@@ -170,6 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           display_name: data.user.display_name || '',
           phone: data.user.phone || '',
           role: data.user.role || 'buyer',
+          registration_completed: data.user.registration_completed || false,
         };
 
         // Extract session data from response
@@ -196,8 +202,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('✅ SIGN IN - Success:', userData.role);
         
-        // Auto-redirect to role dashboard
-        redirectToRoleDashboard(userData.role);
+        // User signed in successfully, navigation will be handled by the app
+        console.log('✅ SIGN IN - User signed in, ready for navigation');
         
         return { success: true };
       } else {
@@ -330,7 +336,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const navigateToRoleHome = () => {
     if (user) {
-      redirectToRoleDashboard(user.role);
+      redirectToRoleDashboard(user.role, user);
+    }
+  };
+
+  const updateRegistrationStatus = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('🔄 AUTH - Updating registration status for user:', user.id);
+      
+      // Update user state
+      const updatedUser = { ...user, registration_completed: true };
+      setUser(updatedUser);
+      
+      // Update stored user data
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      console.log('✅ AUTH - Registration status updated successfully');
+    } catch (error) {
+      console.error('❌ AUTH - Error updating registration status:', error);
     }
   };
 
@@ -344,6 +369,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearAllData,
     navigateToRoleHome,
     validateSession,
+    updateRegistrationStatus,
   };
 
   return (

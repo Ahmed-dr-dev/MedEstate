@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,31 +12,29 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-
+import { useAuth } from '../../../contexts/AuthContext';
+import { API_BASE_URL } from '../../../constants/api';
 const { width, height } = Dimensions.get('window');
 
 interface PersonalInfo {
   firstName: string;
   lastName: string;
   dateOfBirth: string;
-  nationalId: string;
+  nationalId: number;
   phone: string;
   address: string;
   city: string;
-  postalCode: string;
-  experience: string;
-  education: string;
+  postalCode: number;
 }
 
 interface BankInfo {
   bankName: string;
-  bankCode: string;
-  branchName: string;
-  branchCode: string;
   position: string;
-  employeeId: string;
+  employeeId: number;
   department: string;
   workAddress: string;
   supervisorName: string;
@@ -46,35 +44,30 @@ interface BankInfo {
 interface Documents {
   nationalIdDocument: string;
   bankEmploymentLetter: string;
-  educationCertificate: string;
-  experienceLetter: string;
 }
 
 export default function BankAgentRegistration() {
   const router = useRouter();
+  const { signOut, user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
+  const [isCheckingRegistration, setIsCheckingRegistration] = useState(true);
   
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     firstName: '',
     lastName: '',
     dateOfBirth: '',
-    nationalId: '',
+    nationalId: 0,
     phone: '',
     address: '',
     city: '',
-    postalCode: '',
-    experience: '',
-    education: '',
+    postalCode: 0,
   });
 
   const [bankInfo, setBankInfo] = useState<BankInfo>({
     bankName: '',
-    bankCode: '',
-    branchName: '',
-    branchCode: '',
     position: '',
-    employeeId: '',
+    employeeId: 0,
     department: '',
     workAddress: '',
     supervisorName: '',
@@ -84,9 +77,124 @@ export default function BankAgentRegistration() {
   const [documents, setDocuments] = useState<Documents>({
     nationalIdDocument: '',
     bankEmploymentLetter: '',
-    educationCertificate: '',
-    experienceLetter: '',
   });
+
+  // Check if user already has a registration
+  useEffect(() => {
+    const checkExistingRegistration = async () => {
+      if (!user?.id) {
+        setIsCheckingRegistration(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/bank-agent-registration?user_id=${user.id}`);
+        const result = await response.json();
+
+        if (result.success && result.registrations && result.registrations.length > 0) {
+          // User already has a registration, redirect to dashboard
+          Alert.alert(
+            'Registration Already Submitted',
+            'You have already submitted a bank agent registration. Please wait for admin review.',
+            [
+              {
+                text: 'Go to Dashboard',
+                onPress: () => router.replace('/Screens/BankAgent/Dashboard'),
+              },
+            ]
+          );
+        } else {
+          // No existing registration, allow form access
+          setIsCheckingRegistration(false);
+        }
+      } catch (error) {
+        console.error('Error checking existing registration:', error);
+        // If check fails, allow form access
+        setIsCheckingRegistration(false);
+      }
+    };
+
+    checkExistingRegistration();
+  }, [user?.id, router]);
+
+  const pickImage = async (documentType: 'nationalIdDocument' | 'bankEmploymentLetter') => {
+    try {
+      // Request camera permissions
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'Camera permission is required to take photos of documents.');
+        return;
+      }
+
+      // Show action sheet for camera or gallery
+      Alert.alert(
+        'Select Image Source',
+        'Choose how you want to add the document image',
+        [
+          {
+            text: 'Camera',
+            onPress: () => openCamera(documentType),
+          },
+          {
+            text: 'Gallery',
+            onPress: () => openGallery(documentType),
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+      Alert.alert('Error', 'Failed to request camera permissions.');
+    }
+  };
+
+  const openCamera = async (documentType: 'nationalIdDocument' | 'bankEmploymentLetter') => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setDocuments({
+          ...documents,
+          [documentType]: result.assets[0].uri,
+        });
+        Alert.alert('Success', 'Document photo captured successfully!');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  const openGallery = async (documentType: 'nationalIdDocument' | 'bankEmploymentLetter') => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setDocuments({
+          ...documents,
+          [documentType]: result.assets[0].uri,
+        });
+        Alert.alert('Success', 'Document photo selected successfully!');
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    }
+  };
 
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -115,38 +223,137 @@ export default function BankAgentRegistration() {
   };
 
   const validatePersonalInfo = () => {
-    const required = ['firstName', 'lastName', 'nationalId', 'phone', 'address', 'city'];
-    return required.every(field => personalInfo[field as keyof PersonalInfo].trim() !== '');
+    // Check if all required fields are filled
+    const basicValidation = personalInfo.firstName.trim() !== '' &&
+                           personalInfo.lastName.trim() !== '' &&
+                           personalInfo.nationalId > 0 &&
+                           personalInfo.phone.trim() !== '' &&
+                           personalInfo.address.trim() !== '' &&
+                           personalInfo.city.trim() !== '' &&
+                           personalInfo.dateOfBirth.trim() !== '';
+    
+    if (!basicValidation) {
+      return false;
+    }
+    
+    // Validate Tunisian formats
+    const nationalIdValid = /^[0-9]{8}$/.test(personalInfo.nationalId.toString());
+    const phoneValid = /^[0-9]{8}$/.test(personalInfo.phone);
+    const postalCodeValid = personalInfo.postalCode === 0 || /^[0-9]{4}$/.test(personalInfo.postalCode.toString());
+    
+    if (!nationalIdValid || !phoneValid || !postalCodeValid) {
+      return false;
+    }
+    
+    // Validate date format and age
+    try {
+      // Parse DD/MM/YYYY format
+      const dateParts = personalInfo.dateOfBirth.split('/');
+      if (dateParts.length !== 3) {
+        return false;
+      }
+      
+      const day = parseInt(dateParts[0]);
+      const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
+      const year = parseInt(dateParts[2]);
+      
+      const birthDate = new Date(year, month, day);
+      const today = new Date();
+      
+      // Check if date is valid
+      if (isNaN(birthDate.getTime()) || birthDate > today) {
+        return false;
+      }
+      
+      // Calculate age
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const isOver20 = age > 20 || (age === 20 && monthDiff >= 0 && today.getDate() >= birthDate.getDate());
+      
+      return isOver20;
+    } catch (error) {
+      return false;
+    }
   };
 
   const validateBankInfo = () => {
-    const required = ['bankName', 'branchName', 'position', 'employeeId', 'department'];
-    return required.every(field => bankInfo[field as keyof BankInfo].trim() !== '');
+    return bankInfo.bankName.trim() !== '' &&
+           bankInfo.position.trim() !== '' &&
+           bankInfo.employeeId > 0 &&
+           /^[0-9]{6}$/.test(bankInfo.employeeId.toString()) &&
+           bankInfo.department.trim() !== '' &&
+           bankInfo.supervisorPhone.trim() !== '' &&
+           /^[0-9]{8}$/.test(bankInfo.supervisorPhone);
   };
 
-  const handleSubmit = () => {
-    // Store data locally for now
-    const registrationData = {
-      personalInfo,
-      bankInfo,
-      documents,
-      submittedAt: new Date().toISOString(),
-      status: 'pending_review',
-    };
+  const handleSubmit = async () => {
+    try {
+      if (!user?.id) {
+        Alert.alert('Error', 'User not authenticated. Please sign in again.');
+        return;
+      }
 
-    // In a real app, this would be sent to the backend
-    console.log('Registration Data:', registrationData);
-    
-    Alert.alert(
-      'Registration Submitted',
-      'Your bank agent registration has been submitted for admin review. You can access your dashboard but functionality will be limited until approval.',
-      [
-        {
-          text: 'Continue to Dashboard',
-          onPress: () => router.replace('/Screens/BankAgent/Dashboard'),
+      // Prepare data for API
+      const registrationData = {
+        personalInfo: {
+          firstName: personalInfo.firstName,
+          lastName: personalInfo.lastName,
+          dateOfBirth: personalInfo.dateOfBirth,
+          nationalId: personalInfo.nationalId,
+          phone: personalInfo.phone,
+          address: personalInfo.address,
+          city: personalInfo.city,
+          postalCode: personalInfo.postalCode,
         },
-      ]
-    );
+        bankInfo: {
+          bankName: bankInfo.bankName,
+          position: bankInfo.position,
+          employeeId: bankInfo.employeeId,
+          department: bankInfo.department,
+          workAddress: bankInfo.workAddress,
+          supervisorName: bankInfo.supervisorName,
+          supervisorPhone: bankInfo.supervisorPhone,
+        },
+        documents: {
+          nationalIdDocument: documents.nationalIdDocument,
+          bankEmploymentLetter: documents.bankEmploymentLetter,
+        },
+        userId: user.id,
+      };
+
+      // Submit to backend API
+      const response = await fetch(`${API_BASE_URL}/bank-agent-registration`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(registrationData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit registration');
+      }
+      
+      Alert.alert(
+        'Registration Submitted',
+        'Your bank agent registration has been submitted for admin review. You can access your dashboard but functionality will be limited until approval.',
+        [
+          {
+            text: 'Continue to Dashboard',
+            onPress: () => router.replace('/Screens/BankAgent/Dashboard'),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Registration submission error:', error);
+      Alert.alert(
+        'Submission Failed',
+        error instanceof Error ? error.message : 'Failed to submit registration. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const renderProgressBar = () => (
@@ -200,7 +407,7 @@ export default function BankAgentRegistration() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Date of Birth</Text>
+        <Text style={styles.label}>Date of Birth *</Text>
         <TextInput
           style={styles.input}
           value={personalInfo.dateOfBirth}
@@ -210,19 +417,23 @@ export default function BankAgentRegistration() {
           autoCorrect={false}
           editable={true}
         />
+        <Text style={styles.ageNote}>Must be 20 years or older (Format: DD/MM/YYYY)</Text>
       </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>National ID *</Text>
         <TextInput
           style={styles.input}
-          value={personalInfo.nationalId}
-          onChangeText={(text) => setPersonalInfo({...personalInfo, nationalId: text})}
-          placeholder="Enter national ID"
+          value={personalInfo.nationalId.toString()}
+          onChangeText={(text) => setPersonalInfo({...personalInfo, nationalId: parseInt(text) || 0})}
+          placeholder="12345678"
           placeholderTextColor="#94a3b8"
+          keyboardType="numeric"
+          maxLength={8}
           autoCorrect={false}
           editable={true}
         />
+        <Text style={styles.phoneNote}>8 digits (Tunisian CIN format)</Text>
       </View>
 
       <View style={styles.inputGroup}>
@@ -231,12 +442,14 @@ export default function BankAgentRegistration() {
           style={styles.input}
           value={personalInfo.phone}
           onChangeText={(text) => setPersonalInfo({...personalInfo, phone: text})}
-          placeholder="Enter phone number"
+          placeholder="12345678"
           placeholderTextColor="#94a3b8"
           keyboardType="phone-pad"
+          maxLength={8}
           autoCorrect={false}
           editable={true}
         />
+        <Text style={styles.phoneNote}>8 digits (Tunisian format)</Text>
       </View>
 
       <View style={styles.inputGroup}>
@@ -271,43 +484,19 @@ export default function BankAgentRegistration() {
           <Text style={styles.label}>Postal Code</Text>
           <TextInput
             style={styles.input}
-            value={personalInfo.postalCode}
-            onChangeText={(text) => setPersonalInfo({...personalInfo, postalCode: text})}
-            placeholder="Enter postal code"
+            value={personalInfo.postalCode.toString()}
+            onChangeText={(text) => setPersonalInfo({...personalInfo, postalCode: parseInt(text) || 0})}
+            placeholder="1000"
             placeholderTextColor="#94a3b8"
+            keyboardType="numeric"
+            maxLength={4}
             autoCorrect={false}
             editable={true}
           />
+          <Text style={styles.phoneNote}>4 digits (Tunisian postal code)</Text>
         </View>
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Years of Experience</Text>
-        <TextInput
-          style={styles.input}
-          value={personalInfo.experience}
-          onChangeText={(text) => setPersonalInfo({...personalInfo, experience: text})}
-          placeholder="Enter years of banking experience"
-          placeholderTextColor="#94a3b8"
-          keyboardType="numeric"
-          autoCorrect={false}
-          editable={true}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Education</Text>
-        <TextInput
-          style={styles.input}
-          value={personalInfo.education}
-          onChangeText={(text) => setPersonalInfo({...personalInfo, education: text})}
-          placeholder="Enter highest education level"
-          placeholderTextColor="#94a3b8"
-          autoCapitalize="words"
-          autoCorrect={false}
-          editable={true}
-        />
-      </View>
     </View>
   );
 
@@ -330,46 +519,6 @@ export default function BankAgentRegistration() {
         />
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Bank Code</Text>
-        <TextInput
-          style={styles.input}
-          value={bankInfo.bankCode}
-          onChangeText={(text) => setBankInfo({...bankInfo, bankCode: text})}
-          placeholder="Enter bank code"
-          placeholderTextColor="#94a3b8"
-          autoCorrect={false}
-          editable={true}
-        />
-      </View>
-
-      <View style={styles.row}>
-        <View style={styles.halfInput}>
-          <Text style={styles.label}>Branch Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={bankInfo.branchName}
-            onChangeText={(text) => setBankInfo({...bankInfo, branchName: text})}
-            placeholder="Enter branch name"
-            placeholderTextColor="#94a3b8"
-            autoCapitalize="words"
-            autoCorrect={false}
-            editable={true}
-          />
-        </View>
-        <View style={styles.halfInput}>
-          <Text style={styles.label}>Branch Code</Text>
-          <TextInput
-            style={styles.input}
-            value={bankInfo.branchCode}
-            onChangeText={(text) => setBankInfo({...bankInfo, branchCode: text})}
-            placeholder="Enter branch code"
-            placeholderTextColor="#94a3b8"
-            autoCorrect={false}
-            editable={true}
-          />
-        </View>
-      </View>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Position *</Text>
@@ -390,13 +539,16 @@ export default function BankAgentRegistration() {
           <Text style={styles.label}>Employee ID *</Text>
           <TextInput
             style={styles.input}
-            value={bankInfo.employeeId}
-            onChangeText={(text) => setBankInfo({...bankInfo, employeeId: text})}
-            placeholder="Enter employee ID"
+            value={bankInfo.employeeId.toString()}
+            onChangeText={(text) => setBankInfo({...bankInfo, employeeId: parseInt(text) || 0})}
+            placeholder="123456"
             placeholderTextColor="#94a3b8"
+            keyboardType="numeric"
+            maxLength={6}
             autoCorrect={false}
             editable={true}
           />
+          <Text style={styles.phoneNote}>6 digits (Employee ID)</Text>
         </View>
         <View style={styles.halfInput}>
           <Text style={styles.label}>Department *</Text>
@@ -442,17 +594,19 @@ export default function BankAgentRegistration() {
           />
         </View>
         <View style={styles.halfInput}>
-          <Text style={styles.label}>Supervisor Phone</Text>
+          <Text style={styles.label}>Supervisor Phone *</Text>
           <TextInput
             style={styles.input}
             value={bankInfo.supervisorPhone}
             onChangeText={(text) => setBankInfo({...bankInfo, supervisorPhone: text})}
-            placeholder="Enter supervisor phone"
+            placeholder="12345678"
             placeholderTextColor="#94a3b8"
             keyboardType="phone-pad"
+            maxLength={8}
             autoCorrect={false}
             editable={true}
           />
+          <Text style={styles.phoneNote}>8 digits (Tunisian format)</Text>
         </View>
       </View>
     </View>
@@ -465,41 +619,56 @@ export default function BankAgentRegistration() {
 
       <View style={styles.documentItem}>
         <Text style={styles.documentLabel}>National ID Document *</Text>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Text style={styles.uploadButtonText}>📄 Choose File</Text>
-        </TouchableOpacity>
-        <Text style={styles.documentNote}>Upload a clear photo of your national ID</Text>
+        {documents.nationalIdDocument ? (
+          <View style={styles.imageContainer}>
+            <Image source={{ uri: documents.nationalIdDocument }} style={styles.documentImage} />
+            <TouchableOpacity 
+              style={styles.changeButton}
+              onPress={() => pickImage('nationalIdDocument')}
+            >
+              <Text style={styles.changeButtonText}>Change Photo</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={styles.uploadButton}
+            onPress={() => pickImage('nationalIdDocument')}
+          >
+            <Text style={styles.uploadButtonText}>📷 Take Photo</Text>
+          </TouchableOpacity>
+        )}
+        <Text style={styles.documentNote}>Take a clear photo of your national ID</Text>
       </View>
 
       <View style={styles.documentItem}>
         <Text style={styles.documentLabel}>Bank Employment Letter *</Text>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Text style={styles.uploadButtonText}>📄 Choose File</Text>
-        </TouchableOpacity>
-        <Text style={styles.documentNote}>Official employment letter from your bank</Text>
+        {documents.bankEmploymentLetter ? (
+          <View style={styles.imageContainer}>
+            <Image source={{ uri: documents.bankEmploymentLetter }} style={styles.documentImage} />
+            <TouchableOpacity 
+              style={styles.changeButton}
+              onPress={() => pickImage('bankEmploymentLetter')}
+            >
+              <Text style={styles.changeButtonText}>Change Photo</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={styles.uploadButton}
+            onPress={() => pickImage('bankEmploymentLetter')}
+          >
+            <Text style={styles.uploadButtonText}>📷 Take Photo</Text>
+          </TouchableOpacity>
+        )}
+        <Text style={styles.documentNote}>Take a photo of your official employment letter</Text>
       </View>
 
-      <View style={styles.documentItem}>
-        <Text style={styles.documentLabel}>Education Certificate</Text>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Text style={styles.uploadButtonText}>📄 Choose File</Text>
-        </TouchableOpacity>
-        <Text style={styles.documentNote}>Your highest education certificate</Text>
-      </View>
-
-      <View style={styles.documentItem}>
-        <Text style={styles.documentLabel}>Experience Letter</Text>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Text style={styles.uploadButtonText}>📄 Choose File</Text>
-        </TouchableOpacity>
-        <Text style={styles.documentNote}>Previous banking experience letter (if applicable)</Text>
-      </View>
 
       <View style={styles.noteContainer}>
         <Text style={styles.noteTitle}>📋 Document Requirements:</Text>
-        <Text style={styles.noteText}>• All documents must be clear and readable</Text>
-        <Text style={styles.noteText}>• Accepted formats: JPG, PNG, PDF</Text>
-        <Text style={styles.noteText}>• Maximum file size: 5MB per document</Text>
+        <Text style={styles.noteText}>• Take clear, well-lit photos of documents</Text>
+        <Text style={styles.noteText}>• Ensure all text is readable in the photo</Text>
+        <Text style={styles.noteText}>• Avoid shadows and reflections</Text>
         <Text style={styles.noteText}>• Documents marked with * are required</Text>
       </View>
     </View>
@@ -513,12 +682,20 @@ export default function BankAgentRegistration() {
       <View style={styles.reviewSection}>
         <Text style={styles.reviewSectionTitle}>Personal Information</Text>
         <View style={styles.reviewItem}>
-          <Text style={styles.reviewLabel}>Name:</Text>
-          <Text style={styles.reviewValue}>{personalInfo.firstName} {personalInfo.lastName}</Text>
+          <Text style={styles.reviewLabel}>First Name:</Text>
+          <Text style={styles.reviewValue}>{personalInfo.firstName}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Last Name:</Text>
+          <Text style={styles.reviewValue}>{personalInfo.lastName}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Date of Birth:</Text>
+          <Text style={styles.reviewValue}>{personalInfo.dateOfBirth}</Text>
         </View>
         <View style={styles.reviewItem}>
           <Text style={styles.reviewLabel}>National ID:</Text>
-          <Text style={styles.reviewValue}>{personalInfo.nationalId}</Text>
+          <Text style={styles.reviewValue}>{personalInfo.nationalId.toString()}</Text>
         </View>
         <View style={styles.reviewItem}>
           <Text style={styles.reviewLabel}>Phone:</Text>
@@ -526,19 +703,23 @@ export default function BankAgentRegistration() {
         </View>
         <View style={styles.reviewItem}>
           <Text style={styles.reviewLabel}>Address:</Text>
-          <Text style={styles.reviewValue}>{personalInfo.address}, {personalInfo.city}</Text>
+          <Text style={styles.reviewValue}>{personalInfo.address}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>City:</Text>
+          <Text style={styles.reviewValue}>{personalInfo.city}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Postal Code:</Text>
+          <Text style={styles.reviewValue}>{personalInfo.postalCode.toString()}</Text>
         </View>
       </View>
 
       <View style={styles.reviewSection}>
         <Text style={styles.reviewSectionTitle}>Bank Information</Text>
         <View style={styles.reviewItem}>
-          <Text style={styles.reviewLabel}>Bank:</Text>
+          <Text style={styles.reviewLabel}>Bank Name:</Text>
           <Text style={styles.reviewValue}>{bankInfo.bankName}</Text>
-        </View>
-        <View style={styles.reviewItem}>
-          <Text style={styles.reviewLabel}>Branch:</Text>
-          <Text style={styles.reviewValue}>{bankInfo.branchName}</Text>
         </View>
         <View style={styles.reviewItem}>
           <Text style={styles.reviewLabel}>Position:</Text>
@@ -546,7 +727,35 @@ export default function BankAgentRegistration() {
         </View>
         <View style={styles.reviewItem}>
           <Text style={styles.reviewLabel}>Employee ID:</Text>
-          <Text style={styles.reviewValue}>{bankInfo.employeeId}</Text>
+          <Text style={styles.reviewValue}>{bankInfo.employeeId.toString()}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Department:</Text>
+          <Text style={styles.reviewValue}>{bankInfo.department}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Work Address:</Text>
+          <Text style={styles.reviewValue}>{bankInfo.workAddress || 'Not provided'}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Supervisor Name:</Text>
+          <Text style={styles.reviewValue}>{bankInfo.supervisorName || 'Not provided'}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Supervisor Phone:</Text>
+          <Text style={styles.reviewValue}>{bankInfo.supervisorPhone}</Text>
+        </View>
+      </View>
+
+      <View style={styles.reviewSection}>
+        <Text style={styles.reviewSectionTitle}>Documents</Text>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>National ID Document:</Text>
+          <Text style={styles.reviewValue}>{documents.nationalIdDocument ? '✅ Uploaded' : '❌ Not uploaded'}</Text>
+        </View>
+        <View style={styles.reviewItem}>
+          <Text style={styles.reviewLabel}>Bank Employment Letter:</Text>
+          <Text style={styles.reviewValue}>{documents.bankEmploymentLetter ? '✅ Uploaded' : '❌ Not uploaded'}</Text>
         </View>
       </View>
 
@@ -589,6 +798,18 @@ export default function BankAgentRegistration() {
     }
   };
 
+  // Show loading while checking registration
+  if (isCheckingRegistration) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
+        <View style={styles.loadingContent}>
+          <Text style={styles.loadingText}>Checking registration status...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
@@ -597,13 +818,18 @@ export default function BankAgentRegistration() {
       <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
             {/* Header */}
         <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Text style={styles.icon}>🏦</Text>
+          <View style={styles.headerLeft}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.icon}>🏦</Text>
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.title}>Bank Agent Registration</Text>
+              <Text style={styles.subtitle}>Complete your profile to get started</Text>
+            </View>
           </View>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>Bank Agent Registration</Text>
-            <Text style={styles.subtitle}>Complete your profile to get started</Text>
-          </View>
+          <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+            <Text style={styles.logoutIcon}>🚪</Text>
+          </TouchableOpacity>
         </View>
 
       {renderProgressBar()}
@@ -673,10 +899,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
     backgroundColor: '#1e293b',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   iconContainer: {
     width: 50,
@@ -806,6 +1038,46 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     minHeight: 48,
     textAlignVertical: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#1f2937',
+    textAlignVertical: 'center',
+  },
+  ageNote: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  phoneNote: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  imageContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  documentImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  changeButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  changeButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
   documentItem: {
     marginBottom: 25,
@@ -956,5 +1228,30 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#d1d5db',
+  },
+  logoutButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  logoutIcon: {
+    fontSize: 18,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContent: {
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+    marginTop: 20,
   },
 });

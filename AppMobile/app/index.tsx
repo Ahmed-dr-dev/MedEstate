@@ -37,7 +37,7 @@ export default function Index() {
         router.replace('/Screens/Buyer/Dashboard');
         break;
       case 'bank_agent':
-        router.replace('/Screens/BankAgent/LoanReviewDashboard');
+        router.replace('/Screens/BankAgent/Registration');
         break;
 
       default:

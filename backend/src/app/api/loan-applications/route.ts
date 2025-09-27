@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Handle form data (with documents)
     if (contentType && contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
-      
+      console.log(formData);
       const applicant_id = formData.get('applicant_id') as string;
       const property_id = formData.get('property_id') as string;
       const loan_amount = formData.get('loan_amount') as string;
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
           submitted_documents: [],
           bank_agent_decision: null,
           bank_agent_notes: null,
-          bank_agent_id: null
+          bank_agent_id: selected_bank_id || null
         })
         .select('id')
         .single();
@@ -149,45 +149,31 @@ export async function POST(request: NextRequest) {
       // Upload documents to Supabase Storage
       const uploadedDocuments: string[] = [];
       const documentUrls: { identity_card?: string; proof_of_income?: string } = {};
-      const folderPath = `loan-applications/${loanApplication.id}`;
 
       // Upload Identity Card if provided
       if (identity_card && identity_card.size > 0) {
         try {
           const identityCardBuffer = await identity_card.arrayBuffer();
           const identityCardExtension = identity_card.name.split('.').pop() || 'jpg';
-          const identityCardFileName = `identity_card_${Date.now()}.${identityCardExtension}`;
-          const identityCardPath = `${folderPath}/${identityCardFileName}`;
+          const identityCardFileName = `${loanApplication.id}/identity_card_${Date.now()}.${identityCardExtension}`;
 
           const { data: identityCardData, error: identityCardError } = await supabase.storage
             .from('loan-application-documents')
-            .upload(identityCardPath, identityCardBuffer, {
+            .upload(identityCardFileName, identityCardBuffer, {
               contentType: identity_card.type,
               upsert: false
             });
 
-          if (identityCardError) {
-            console.error('Error uploading identity card:', identityCardError);
-            return NextResponse.json(
-              { success: false, error: 'Failed to upload identity card' },
-              { status: 500 }
-            );
+          if (!identityCardError) {
+            const { data: { publicUrl: identityCardUrl } } = supabase.storage
+              .from('loan-application-documents')
+              .getPublicUrl(identityCardFileName);
+
+            documentUrls.identity_card = identityCardUrl;
+            uploadedDocuments.push(`Identity Card: ${identity_card.name}`);
           }
-
-          // Get public URL
-          const { data: { publicUrl: identityCardUrl } } = supabase.storage
-            .from('loan-application-documents')
-            .getPublicUrl(identityCardPath);
-
-          documentUrls.identity_card = identityCardUrl;
-          uploadedDocuments.push(`Identity Card: ${identity_card.name}`);
-
         } catch (error) {
           console.error('Error processing identity card:', error);
-          return NextResponse.json(
-            { success: false, error: 'Failed to process identity card' },
-            { status: 500 }
-          );
         }
       }
 
@@ -196,38 +182,25 @@ export async function POST(request: NextRequest) {
         try {
           const proofOfIncomeBuffer = await proof_of_income.arrayBuffer();
           const proofOfIncomeExtension = proof_of_income.name.split('.').pop() || 'jpg';
-          const proofOfIncomeFileName = `proof_of_income_${Date.now()}.${proofOfIncomeExtension}`;
-          const proofOfIncomePath = `${folderPath}/${proofOfIncomeFileName}`;
+          const proofOfIncomeFileName = `${loanApplication.id}/proof_of_income_${Date.now()}.${proofOfIncomeExtension}`;
 
           const { data: proofOfIncomeData, error: proofOfIncomeError } = await supabase.storage
             .from('loan-application-documents')
-            .upload(proofOfIncomePath, proofOfIncomeBuffer, {
+            .upload(proofOfIncomeFileName, proofOfIncomeBuffer, {
               contentType: proof_of_income.type,
               upsert: false
             });
 
-          if (proofOfIncomeError) {
-            console.error('Error uploading proof of income:', proofOfIncomeError);
-            return NextResponse.json(
-              { success: false, error: 'Failed to upload proof of income' },
-              { status: 500 }
-            );
+          if (!proofOfIncomeError) {
+            const { data: { publicUrl: proofOfIncomeUrl } } = supabase.storage
+              .from('loan-application-documents')
+              .getPublicUrl(proofOfIncomeFileName);
+
+            documentUrls.proof_of_income = proofOfIncomeUrl;
+            uploadedDocuments.push(`Proof of Income: ${proof_of_income.name}`);
           }
-
-          // Get public URL
-          const { data: { publicUrl: proofOfIncomeUrl } } = supabase.storage
-            .from('loan-application-documents')
-            .getPublicUrl(proofOfIncomePath);
-
-          documentUrls.proof_of_income = proofOfIncomeUrl;
-          uploadedDocuments.push(`Proof of Income: ${proof_of_income.name}`);
-
         } catch (error) {
           console.error('Error processing proof of income:', error);
-          return NextResponse.json(
-            { success: false, error: 'Failed to process proof of income' },
-            { status: 500 }
-          );
         }
       }
 
@@ -348,7 +321,7 @@ export async function POST(request: NextRequest) {
           submitted_documents,
           bank_agent_decision: null,
           bank_agent_notes: null,
-          bank_agent_id: null
+          bank_agent_id: selected_bank_id || null
         })
         .select(`
           *,
