@@ -8,9 +8,11 @@ import {
   Dimensions,
   ScrollView,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
+import { API_BASE_URL } from '@/constants/api';
 
 const { width } = Dimensions.get('window');
 
@@ -36,8 +38,19 @@ export default function BuyerDashboard() {
   const floatAnim1 = useRef(new Animated.Value(0)).current;
   const floatAnim2 = useRef(new Animated.Value(0)).current;
   const floatAnim3 = useRef(new Animated.Value(0)).current;
+  
+  const [stats, setStats] = useState<DashboardStats>({
+    savedProperties: 0,
+    loanApplications: 0,
+    scheduledVisits: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (user?.id) {
+      fetchDashboardData();
+    }
+    
     // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -74,12 +87,32 @@ export default function BuyerDashboard() {
     setTimeout(() => createFloatingAnimation(floatAnim1, 0).start(), 500);
     setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
     setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
-  }, []);
-  const [stats] = useState<DashboardStats>({
-    savedProperties: 12,
-    loanApplications: 3,
-    scheduledVisits: 2,
-  });
+  }, [user?.id]);
+
+  const fetchDashboardData = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      // Fetch saved properties count
+      const favoritesResponse = await fetch(`${API_BASE_URL}/properties/save?user_id=${user.id}`);
+      const favoritesResult = await favoritesResponse.json();
+      
+      // Fetch loan applications count
+      const applicationsResponse = await fetch(`${API_BASE_URL}/loan-applications?applicant_id=${user.id}`);
+      const applicationsResult = await applicationsResponse.json();
+      
+      setStats({
+        savedProperties: favoritesResult.success ? favoritesResult.data.length : 0,
+        loanApplications: applicationsResult.success ? applicationsResult.data.length : 0,
+        scheduledVisits: 0, // This can be implemented later if needed
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [marketTrends] = useState<MarketTrend[]>([
     {
@@ -105,8 +138,12 @@ export default function BuyerDashboard() {
     },
   ]);
 
-  const renderStatCard = (title: string, value: number, icon: string, color: string, description: string) => (
-    <View style={[styles.statCard, { borderLeftColor: color }]}>
+  const renderStatCard = (title: string, value: number, icon: string, color: string, description: string, onPress?: () => void) => (
+    <TouchableOpacity 
+      style={[styles.statCard, { borderLeftColor: color }]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.8 : 1}
+    >
       <View style={styles.statHeader}>
         <View style={styles.statIconContainer}>
           <Text style={styles.statIcon}>{icon}</Text>
@@ -115,7 +152,7 @@ export default function BuyerDashboard() {
       </View>
       <Text style={styles.statTitle}>{title}</Text>
       <Text style={styles.statDescription}>{description}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderMarketTrend = (trend: MarketTrend) => (
@@ -247,9 +284,17 @@ export default function BuyerDashboard() {
         >
           <Text style={styles.sectionTitle}>Your Activity</Text>
           <View style={styles.statsContainer}>
-            {renderStatCard('Saved Properties', stats.savedProperties, '❤️', '#ef4444', 'Properties you\'ve favorited')}
-            {renderStatCard('Loan Applications', stats.loanApplications, '💰', '#10b981', 'Applications submitted')}
-
+            {loading ? (
+              <View style={styles.loadingStatsContainer}>
+                <ActivityIndicator size="large" color="#3b82f6" />
+                <Text style={styles.loadingStatsText}>Loading your activity...</Text>
+              </View>
+            ) : (
+              <>
+                {renderStatCard('Saved Properties', stats.savedProperties, '❤️', '#ef4444', 'Properties you\'ve favorited')}
+                {renderStatCard('Loan Applications', stats.loanApplications, '💰', '#10b981', 'Applications submitted', () => router.push('/Screens/Buyer/LoanApplicationResults'))}
+              </>
+            )}
           </View>
         </Animated.View>
       </Animated.ScrollView>
@@ -489,5 +534,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
     lineHeight: 20,
+  },
+  loadingStatsContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  loadingStatsText: {
+    color: 'white',
+    fontSize: 16,
+    marginTop: 16,
+    fontWeight: '500',
   },
 });

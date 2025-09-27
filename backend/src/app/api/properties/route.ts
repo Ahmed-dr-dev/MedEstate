@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from "../../../../lib/supabaseServer"  
 
 // GET /api/properties - Get all properties
+
 export async function GET() {
   try {
     const { data: properties, error } = await supabase
@@ -17,7 +18,6 @@ export async function GET() {
 
       .eq('is_active', true)
       .order('created_at', { ascending: false });
-console.log(properties);
     if (error) {
       console.error('Error fetching properties:', error);
       return NextResponse.json(

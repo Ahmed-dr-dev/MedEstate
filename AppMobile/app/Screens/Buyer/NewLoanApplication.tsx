@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,30 @@ import {
   StatusBar,
   TextInput,
   Alert,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_BASE_URL } from '@/constants/api';
+
+interface Property {
+  id: string;
+  title: string;
+  price: number;
+  location: string;
+  description?: string;
+  images?: string[];
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  property_type?: string;
+  owner?: {
+    display_name: string;
+    phone: string;
+  };
+}
 
 interface Bank {
   id: string;
@@ -23,38 +45,31 @@ interface Bank {
   verificationStatus: 'verified' | 'pending' | 'unverified';
 }
 
-interface LoanApplication {
-  id: string;
-  propertyTitle: string;
-  bankName: string;
-  amount: number;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review';
-  submittedDate: string;
-  expectedResponse: string;
-}
-
 export default function NewLoanApplication() {
   const router = useRouter();
-  const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
-  const [showBankSelection, setShowBankSelection] = useState(false);
+  const { user } = useAuth();
+  
+  // State management
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [applicationForm, setApplicationForm] = useState({
-    propertyValue: '',
-    downPayment: '',
-    loanAmount: '',
-    purpose: 'residential',
-    propertyType: 'condo',
-    propertyAddress: '',
-    propertyDescription: '',
-    employmentStatus: '',
-    annualIncome: '',
-    creditScore: '',
-    includeInsurance: false,
-    insuranceType: 'homeowners',
-    insuranceAmount: '',
-    insuranceProvider: ''
-  });
+  const [loadingProperties, setLoadingProperties] = useState(false);
+  const [showPropertySelection, setShowPropertySelection] = useState(false);
+  const [showBankSelection, setShowBankSelection] = useState(false);
+  
+  // Data
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
+  
+  // Form data
+  const [loanAmount, setLoanAmount] = useState('');
+  const [loanTerm, setLoanTerm] = useState('');
+  const [employmentStatus, setEmploymentStatus] = useState('');
+  const [annualIncome, setAnnualIncome] = useState('');
+  const [identityCard, setIdentityCard] = useState<string | null>(null);
+  const [proofOfIncome, setProofOfIncome] = useState<string | null>(null);
+  const [includeInsurance, setIncludeInsurance] = useState(false);
+  const [monthlyInsuranceAmount, setMonthlyInsuranceAmount] = useState('');
 
   const banks: Bank[] = [
     {
@@ -89,42 +104,102 @@ export default function NewLoanApplication() {
       rating: 4.4,
       isVerified: false,
       verificationStatus: 'pending'
-    },
-    {
-      id: '4',
-      name: 'Regional Bank',
-      logo: '🏪',
-      interestRate: '6.0%',
-      processingTime: '3-5 days',
-      maxLoanAmount: '$1M',
-      rating: 4.9,
-      isVerified: false,
-      verificationStatus: 'unverified'
     }
   ];
 
   const steps = [
-    { id: 1, title: 'Property Details', description: 'Basic property information' },
+    { id: 1, title: 'Select Property', description: 'Choose from existing properties' },
     { id: 2, title: 'Financial Info', description: 'Income and credit details' },
     { id: 3, title: 'Bank Selection', description: 'Choose your preferred bank' },
     { id: 4, title: 'Insurance', description: 'Property insurance options' },
     { id: 5, title: 'Review & Submit', description: 'Review and submit application' }
   ];
 
+  // Fetch properties on component mount
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  const fetchProperties = async () => {
+    setLoadingProperties(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/properties`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && Array.isArray(result.data)) {
+        setProperties(result.data);
+      } else {
+        console.error('API response error:', result);
+        Alert.alert('Error', result.error || 'Failed to fetch properties');
+      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      Alert.alert('Error', 'Failed to fetch properties. Please check your connection and try again.');
+    } finally {
+      setLoadingProperties(false);
+    }
+  };
+
+  const handlePropertySelect = (property: Property) => {
+    setSelectedProperty(property);
+    setLoanAmount(property.price.toString());
+    setShowPropertySelection(false);
+  };
+
+  const handleBankSelect = (bank: Bank) => {
+    setSelectedBank(bank);
+    setShowBankSelection(false);
+  };
+
+  const pickImage = async (type: 'identity' | 'income') => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant permission to access your photo library.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        if (type === 'identity') {
+          setIdentityCard(result.assets[0].uri);
+        } else {
+          setProofOfIncome(result.assets[0].uri);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
   const validateStep = (step: number) => {
     switch (step) {
       case 1:
-        return applicationForm.propertyValue && applicationForm.downPayment && applicationForm.loanAmount && applicationForm.propertyAddress;
+        return selectedProperty !== null && loanAmount !== '' && loanTerm !== '';
       case 2:
-        return applicationForm.employmentStatus && applicationForm.annualIncome && applicationForm.creditScore;
+        return employmentStatus !== '' && annualIncome !== '' && identityCard !== null && proofOfIncome !== null;
       case 3:
         return selectedBank !== null;
       case 4:
-        // If insurance is enabled, insurance amount must be provided
-        if (applicationForm.includeInsurance) {
-          return applicationForm.insuranceAmount && parseFloat(applicationForm.insuranceAmount) > 0;
+        if (includeInsurance) {
+          return monthlyInsuranceAmount !== '' && parseFloat(monthlyInsuranceAmount) > 0;
         }
-        return true; // Insurance is optional
+        return true;
       case 5:
         return true;
       default:
@@ -133,13 +208,8 @@ export default function NewLoanApplication() {
   };
 
   const nextStep = () => {
-    if (currentStep < 5) {
-      if (currentStep === 4) {
-        // When moving from insurance step to review, allow proceeding without strict validation
-        setCurrentStep(currentStep + 1);
-      } else if (validateStep(currentStep)) {
-        setCurrentStep(currentStep + 1);
-      }
+    if (currentStep < 5 && validateStep(currentStep)) {
+      setCurrentStep(currentStep + 1);
     }
   };
 
@@ -149,12 +219,12 @@ export default function NewLoanApplication() {
     }
   };
 
-  const handleBankSelect = (bank: Bank) => {
-    setSelectedBank(bank);
-    setShowBankSelection(false);
-  };
-
   const submitApplication = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'Please log in to submit a loan application');
+      return;
+    }
+
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
       Alert.alert('Error', 'Please complete all required fields');
       return;
@@ -162,100 +232,184 @@ export default function NewLoanApplication() {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      Alert.alert(
-        'Success', 
-        'Loan application submitted successfully!',
-        [
-          {
-            text: 'View Applications',
-            onPress: () => router.push('/Screens/Buyer/LoanApplicationResults')
-          },
-          {
-            text: 'OK',
-            onPress: () => router.back()
-          }
-        ]
-      );
-      setIsSubmitting(false);
-      // Reset form
-      setCurrentStep(1);
-      setApplicationForm({
-        propertyValue: '',
-        downPayment: '',
-        loanAmount: '',
-        purpose: 'residential',
-        propertyType: 'condo',
-        propertyAddress: '',
-        propertyDescription: '',
-        employmentStatus: '',
-        annualIncome: '',
-        creditScore: '',
-        includeInsurance: false,
-        insuranceType: 'homeowners',
-        insuranceAmount: '',
-        insuranceProvider: ''
-      });
-      setSelectedBank(null);
-    }, 2000);
-  };
+    try {
+      // Calculate monthly payment
+      const loanAmountNum = parseFloat(loanAmount);
+      const interestRate = selectedBank ? parseFloat(selectedBank.interestRate.replace('%', '')) : 6.5;
+      const loanTermYears = parseInt(loanTerm);
+      
+      const monthlyRate = interestRate / 100 / 12;
+      const numberOfPayments = loanTermYears * 12;
+      const monthlyPayment = (loanAmountNum * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) / 
+                            (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
 
+      // Prepare documents array
+      const submittedDocuments = [];
+      if (employmentStatus) {
+        submittedDocuments.push(`Employment: ${employmentStatus}`);
+      }
+      if (identityCard) {
+        submittedDocuments.push(`Identity Card: Uploaded`);
+      }
+      if (proofOfIncome) {
+        submittedDocuments.push(`Proof of Income: Uploaded`);
+      }
+      if (includeInsurance && monthlyInsuranceAmount) {
+        submittedDocuments.push(`Insurance: ${monthlyInsuranceAmount} د.ت/month`);
+      }
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Add all form fields
+      formData.append('applicant_id', user.id);
+      formData.append('property_id', selectedProperty?.id || '');
+      formData.append('loan_amount', loanAmountNum.toFixed(2));
+      formData.append('loan_term_years', loanTerm);
+      formData.append('interest_rate', (interestRate / 100).toFixed(4));
+      formData.append('monthly_payment', monthlyPayment.toFixed(2));
+      formData.append('employment_status', employmentStatus);
+      formData.append('annual_income', annualIncome);
+      formData.append('selected_bank_id', selectedBank?.id || '');
+      formData.append('include_insurance', includeInsurance.toString());
+      if (includeInsurance && monthlyInsuranceAmount) {
+        formData.append('monthly_insurance_amount', monthlyInsuranceAmount);
+      }
+
+      // Add files if they exist
+      if (identityCard) {
+        formData.append('identity_card', {
+          uri: identityCard,
+          type: 'image/jpeg',
+          name: 'identity_card.jpg'
+        } as any);
+      }
+      
+      if (proofOfIncome) {
+        formData.append('proof_of_income', {
+          uri: proofOfIncome,
+          type: 'image/jpeg',
+          name: 'proof_of_income.jpg'
+        } as any);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/loan-applications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        Alert.alert(
+          'Success', 
+          'Loan application submitted successfully!',
+          [
+            {
+              text: 'View Results',
+              onPress: () => router.push('/Screens/Buyer/LoanApplicationResults')
+            },
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', result.error || 'Failed to submit loan application');
+      }
+    } catch (error) {
+      console.error('Error submitting loan application:', error);
+      Alert.alert('Error', 'Failed to submit loan application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepContentTitle}>Property Details</Text>
-            <Text style={styles.stepContentSubtitle}>Tell us about the property you want to purchase</Text>
+            <Text style={styles.stepContentTitle}>Select Property</Text>
+            <Text style={styles.stepContentSubtitle}>Choose from existing properties</Text>
             
+            <TouchableOpacity 
+              style={styles.propertySelector}
+              onPress={() => setShowPropertySelection(true)}
+            >
+              <Text style={styles.propertySelectorLabel}>Select Property *</Text>
+              <View style={styles.propertySelectorContent}>
+                {selectedProperty ? (
+                  <View style={styles.selectedProperty}>
+                    <Text style={styles.propertyTitle}>{selectedProperty.title}</Text>
+                    <Text style={styles.propertyLocation}>📍 {selectedProperty.location}</Text>
+                    <Text style={styles.propertyPrice}>{selectedProperty.price.toLocaleString()} د.ت</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.propertySelectorPlaceholder}>Choose a property...</Text>
+                )}
+                <Text style={styles.propertySelectorArrow}>›</Text>
+              </View>
+            </TouchableOpacity>
+
+            {selectedProperty && (
+              <View style={styles.selectedPropertyCard}>
+                <Text style={styles.selectedPropertyTitle}>Selected Property</Text>
+                <Text style={styles.propertyTitle}>{selectedProperty.title}</Text>
+                <Text style={styles.propertyLocation}>📍 {selectedProperty.location}</Text>
+                <Text style={styles.propertyPrice}>{selectedProperty.price.toLocaleString()} د.ت</Text>
+                {selectedProperty.bedrooms && selectedProperty.bathrooms && (
+                  <Text style={styles.propertyDetails}>
+                    {selectedProperty.bedrooms} bed • {selectedProperty.bathrooms} bath
+                    {selectedProperty.area && ` • ${selectedProperty.area} sq ft`}
+                  </Text>
+                )}
+                {selectedProperty.property_type && (
+                  <Text style={styles.propertyType}>{selectedProperty.property_type}</Text>
+                )}
+                {selectedProperty.description && (
+                  <Text style={styles.propertyDescription}>{selectedProperty.description}</Text>
+                )}
+              </View>
+            )}
+
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Property Address *</Text>
+              <Text style={styles.inputLabel}>Loan Amount (د.ت) *</Text>
               <TextInput
                 style={styles.input}
-                value={applicationForm.propertyAddress}
-                onChangeText={(text) => setApplicationForm(prev => ({ ...prev, propertyAddress: text }))}
-                placeholder="Enter property address"
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
-
-            <View style={styles.inputRow}>
-              <View style={styles.inputGroupHalf}>
-                <Text style={styles.inputLabel}>Property Value ($) *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={applicationForm.propertyValue}
-                  onChangeText={(text) => setApplicationForm(prev => ({ ...prev, propertyValue: text }))}
-                  placeholder="Enter property value"
-                  keyboardType="numeric"
-                  placeholderTextColor="#94a3b8"
-                />
-              </View>
-              <View style={styles.inputGroupHalf}>
-                <Text style={styles.inputLabel}>Down Payment ($) *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={applicationForm.downPayment}
-                  onChangeText={(text) => setApplicationForm(prev => ({ ...prev, downPayment: text }))}
-                  placeholder="Enter down payment"
-                  keyboardType="numeric"
-                  placeholderTextColor="#94a3b8"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Loan Amount ($) *</Text>
-              <TextInput
-                style={styles.input}
-                value={applicationForm.loanAmount}
-                onChangeText={(text) => setApplicationForm(prev => ({ ...prev, loanAmount: text }))}
+                value={loanAmount}
+                onChangeText={setLoanAmount}
                 placeholder="Enter loan amount"
                 keyboardType="numeric"
                 placeholderTextColor="#94a3b8"
               />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Loan Term *</Text>
+              <View style={styles.radioGroup}>
+                {['15', '20', '25', '30'].map((term) => (
+                  <TouchableOpacity
+                    key={term}
+                    style={[
+                      styles.radioOption,
+                      loanTerm === term && styles.radioOptionSelected
+                    ]}
+                    onPress={() => setLoanTerm(term)}
+                  >
+                    <Text style={[
+                      styles.radioText,
+                      loanTerm === term && styles.radioTextSelected
+                    ]}>
+                      {term} years
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </View>
         );
@@ -274,13 +428,13 @@ export default function NewLoanApplication() {
                     key={status}
                     style={[
                       styles.radioOption,
-                      applicationForm.employmentStatus === status && styles.radioOptionSelected
+                      employmentStatus === status && styles.radioOptionSelected
                     ]}
-                    onPress={() => setApplicationForm(prev => ({ ...prev, employmentStatus: status }))}
+                    onPress={() => setEmploymentStatus(status)}
                   >
                     <Text style={[
                       styles.radioText,
-                      applicationForm.employmentStatus === status && styles.radioTextSelected
+                      employmentStatus === status && styles.radioTextSelected
                     ]}>
                       {status}
                     </Text>
@@ -290,11 +444,11 @@ export default function NewLoanApplication() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Annual Income ($) *</Text>
+              <Text style={styles.inputLabel}>Annual Income (د.ت) *</Text>
               <TextInput
                 style={styles.input}
-                value={applicationForm.annualIncome}
-                onChangeText={(text) => setApplicationForm(prev => ({ ...prev, annualIncome: text }))}
+                value={annualIncome}
+                onChangeText={setAnnualIncome}
                 placeholder="Enter annual income"
                 keyboardType="numeric"
                 placeholderTextColor="#94a3b8"
@@ -302,15 +456,37 @@ export default function NewLoanApplication() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Credit Score *</Text>
-              <TextInput
-                style={styles.input}
-                value={applicationForm.creditScore}
-                onChangeText={(text) => setApplicationForm(prev => ({ ...prev, creditScore: text }))}
-                placeholder="Enter credit score (300-850)"
-                keyboardType="numeric"
-                placeholderTextColor="#94a3b8"
-              />
+              <Text style={styles.inputLabel}>Personal Identity Card *</Text>
+              <TouchableOpacity 
+                style={styles.fileUploadButton}
+                onPress={() => pickImage('identity')}
+              >
+                {identityCard ? (
+                  <Image source={{ uri: identityCard }} style={styles.uploadedImage} />
+                ) : (
+                  <>
+                    <Text style={styles.fileUploadIcon}>📄</Text>
+                    <Text style={styles.fileUploadText}>Upload Identity Card</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Proof of Income *</Text>
+              <TouchableOpacity 
+                style={styles.fileUploadButton}
+                onPress={() => pickImage('income')}
+              >
+                {proofOfIncome ? (
+                  <Image source={{ uri: proofOfIncome }} style={styles.uploadedImage} />
+                ) : (
+                  <>
+                    <Text style={styles.fileUploadIcon}>💰</Text>
+                    <Text style={styles.fileUploadText}>Upload Proof of Income</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         );
@@ -369,85 +545,32 @@ export default function NewLoanApplication() {
             <View style={styles.inputGroup}>
               <TouchableOpacity 
                 style={styles.insuranceToggle}
-                onPress={() => setApplicationForm(prev => ({ ...prev, includeInsurance: !prev.includeInsurance }))}
+                onPress={() => setIncludeInsurance(!includeInsurance)}
               >
                 <View style={styles.toggleRow}>
                   <Text style={styles.toggleLabel}>Include Property Insurance</Text>
-                  <View style={[styles.toggleSwitch, applicationForm.includeInsurance && styles.toggleSwitchActive]}>
-                    <View style={[styles.toggleThumb, applicationForm.includeInsurance && styles.toggleThumbActive]} />
+                  <View style={[styles.toggleSwitch, includeInsurance && styles.toggleSwitchActive]}>
+                    <View style={[styles.toggleThumb, includeInsurance && styles.toggleThumbActive]} />
                   </View>
                 </View>
               </TouchableOpacity>
             </View>
 
-            {applicationForm.includeInsurance && (
-              <>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Insurance Type</Text>
-                  <View style={styles.insuranceTypeContainer}>
-                    {[
-                      { id: 'homeowners', label: 'Homeowners Insurance', description: 'Comprehensive coverage' },
-                      { id: 'condo', label: 'Condo Insurance', description: 'For condominiums' },
-                      { id: 'renters', label: 'Renters Insurance', description: 'Personal property coverage' }
-                    ].map((type) => (
-                      <TouchableOpacity
-                        key={type.id}
-                        style={[
-                          styles.insuranceTypeOption,
-                          applicationForm.insuranceType === type.id && styles.insuranceTypeOptionSelected
-                        ]}
-                        onPress={() => setApplicationForm(prev => ({ ...prev, insuranceType: type.id }))}
-                      >
-                        <Text style={[
-                          styles.insuranceTypeLabel,
-                          applicationForm.insuranceType === type.id && styles.insuranceTypeLabelSelected
-                        ]}>
-                          {type.label}
-                        </Text>
-                        <Text style={[
-                          styles.insuranceTypeDescription,
-                          applicationForm.insuranceType === type.id && styles.insuranceTypeDescriptionSelected
-                        ]}>
-                          {type.description}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Annual Insurance Premium ($)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={applicationForm.insuranceAmount}
-                    onChangeText={(text) => setApplicationForm(prev => ({ ...prev, insuranceAmount: text }))}
-                    placeholder="Enter annual premium"
-                    keyboardType="numeric"
-                    placeholderTextColor="#64748b"
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Insurance Provider</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={applicationForm.insuranceProvider}
-                    onChangeText={(text) => setApplicationForm(prev => ({ ...prev, insuranceProvider: text }))}
-                    placeholder="Enter insurance company name"
-                    placeholderTextColor="#64748b"
-                  />
-                </View>
-
-                <View style={styles.insuranceInfo}>
-                  <Text style={styles.insuranceInfoTitle}>🛡️ Why Property Insurance?</Text>
-                  <Text style={styles.insuranceInfoText}>
-                    • Protects your property from damage (fire, storms, theft)
-                    • Covers liability if someone is injured on your property
-                    • Required by most lenders for mortgage approval
-                    • Provides peace of mind for your investment
-                  </Text>
-                </View>
-              </>
+            {includeInsurance && (
+              <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>Monthly Insurance Payment (د.ت)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={monthlyInsuranceAmount}
+                  onChangeText={setMonthlyInsuranceAmount}
+                  placeholder="Enter monthly insurance amount"
+                  keyboardType="numeric"
+                  placeholderTextColor="#64748b"
+                />
+                <Text style={styles.insuranceNote}>
+                  This amount will be added to your monthly loan payment to protect your property against damage.
+                </Text>
+              </View>
             )}
           </View>
         );
@@ -461,20 +584,24 @@ export default function NewLoanApplication() {
             <View style={styles.reviewCard}>
               <Text style={styles.reviewSectionTitle}>Property Details</Text>
               <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Property:</Text>
+                <Text style={styles.reviewValue}>{selectedProperty?.title}</Text>
+              </View>
+              <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Address:</Text>
-                <Text style={styles.reviewValue}>{applicationForm.propertyAddress}</Text>
+                <Text style={styles.reviewValue}>{selectedProperty?.location}</Text>
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Property Value:</Text>
-                <Text style={styles.reviewValue}>${applicationForm.propertyValue}</Text>
-              </View>
-              <View style={styles.reviewRow}>
-                <Text style={styles.reviewLabel}>Down Payment:</Text>
-                <Text style={styles.reviewValue}>${applicationForm.downPayment}</Text>
+                 <Text style={styles.reviewValue}>{selectedProperty?.price.toLocaleString()} د.ت</Text>
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Loan Amount:</Text>
-                <Text style={styles.reviewValue}>${applicationForm.loanAmount}</Text>
+                <Text style={styles.reviewValue}>{loanAmount} د.ت</Text>
+              </View>
+              <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Loan Term:</Text>
+                <Text style={styles.reviewValue}>{loanTerm} years</Text>
               </View>
             </View>
 
@@ -482,15 +609,31 @@ export default function NewLoanApplication() {
               <Text style={styles.reviewSectionTitle}>Financial Information</Text>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Employment:</Text>
-                <Text style={styles.reviewValue}>{applicationForm.employmentStatus}</Text>
+                <Text style={styles.reviewValue}>{employmentStatus}</Text>
               </View>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Annual Income:</Text>
-                <Text style={styles.reviewValue}>${applicationForm.annualIncome}</Text>
+                <Text style={styles.reviewValue}>{annualIncome} د.ت</Text>
               </View>
               <View style={styles.reviewRow}>
-                <Text style={styles.reviewLabel}>Credit Score:</Text>
-                <Text style={styles.reviewValue}>{applicationForm.creditScore}</Text>
+                <Text style={styles.reviewLabel}>Identity Card:</Text>
+                <View style={styles.reviewImageContainer}>
+                  {identityCard ? (
+                    <Image source={{ uri: identityCard }} style={styles.reviewImage} />
+                  ) : (
+                    <Text style={styles.reviewValue}>Not uploaded</Text>
+                  )}
+                </View>
+              </View>
+              <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Proof of Income:</Text>
+                <View style={styles.reviewImageContainer}>
+                  {proofOfIncome ? (
+                    <Image source={{ uri: proofOfIncome }} style={styles.reviewImage} />
+                  ) : (
+                    <Text style={styles.reviewValue}>Not uploaded</Text>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -506,23 +649,17 @@ export default function NewLoanApplication() {
               </View>
             </View>
 
-            {applicationForm.includeInsurance && (
+            {includeInsurance && (
               <View style={styles.reviewCard}>
                 <Text style={styles.reviewSectionTitle}>Insurance Information</Text>
                 <View style={styles.reviewRow}>
-                  <Text style={styles.reviewLabel}>Insurance Type:</Text>
-                  <Text style={styles.reviewValue}>{applicationForm.insuranceType.charAt(0).toUpperCase() + applicationForm.insuranceType.slice(1)} Insurance</Text>
+                  <Text style={styles.reviewLabel}>Monthly Insurance:</Text>
+                   <Text style={styles.reviewValue}>{monthlyInsuranceAmount} د.ت</Text>
                 </View>
                 <View style={styles.reviewRow}>
-                  <Text style={styles.reviewLabel}>Annual Premium:</Text>
-                  <Text style={styles.reviewValue}>${applicationForm.insuranceAmount}</Text>
+                  <Text style={styles.reviewLabel}>Annual Insurance:</Text>
+                   <Text style={styles.reviewValue}>{monthlyInsuranceAmount ? (parseFloat(monthlyInsuranceAmount) * 12).toFixed(0) : '0'} د.ت</Text>
                 </View>
-                {applicationForm.insuranceProvider && (
-                  <View style={styles.reviewRow}>
-                    <Text style={styles.reviewLabel}>Provider:</Text>
-                    <Text style={styles.reviewValue}>{applicationForm.insuranceProvider}</Text>
-                  </View>
-                )}
               </View>
             )}
           </View>
@@ -556,7 +693,7 @@ export default function NewLoanApplication() {
           </TouchableOpacity>
         </View>
 
-        {/* Compact Step Progress */}
+        {/* Progress */}
         <View style={styles.progressContainer}>
           <View style={styles.progressHeader}>
             <Text style={styles.progressTitle}>Step {currentStep} of {steps.length}</Text>
@@ -576,35 +713,6 @@ export default function NewLoanApplication() {
               {Math.round((currentStep / steps.length) * 100)}%
             </Text>
           </View>
-          
-          <View style={styles.stepDots}>
-            {steps.map((step, index) => (
-              <View key={step.id} style={styles.stepDotContainer}>
-                <View style={[
-                  styles.stepDot,
-                  currentStep >= step.id && styles.stepDotActive,
-                  currentStep > step.id && styles.stepDotCompleted
-                ]}>
-                  {currentStep > step.id ? (
-                    <Text style={styles.stepDotCheckmark}>✓</Text>
-                  ) : (
-                    <Text style={[
-                      styles.stepDotNumber,
-                      currentStep === step.id && styles.stepDotNumberActive
-                    ]}>
-                      {step.id}
-                    </Text>
-                  )}
-                </View>
-                <Text style={[
-                  styles.stepDotLabel,
-                  currentStep === step.id && styles.stepDotLabelActive
-                ]}>
-                  {step.title.split(' ')[0]}
-                </Text>
-              </View>
-            ))}
-          </View>
         </View>
 
         {/* Step Content */}
@@ -612,82 +720,158 @@ export default function NewLoanApplication() {
           {renderStepContent()}
         </View>
 
-        {/* Continue Button */}
+        {/* Navigation Buttons */}
         <View style={styles.continueButtonContainer}>
-          {currentStep < 5 ? (
+          {currentStep > 1 && currentStep < 5 && (
             <TouchableOpacity 
-              style={[
-                currentStep === 4 ? styles.continueButton : 
-                currentStep === 5 ? styles.submitButton : styles.continueButton,
-                (!validateStep(currentStep) && currentStep < 4) && styles.continueButtonDisabled,
-                isSubmitting && styles.submitButtonDisabled
-              ]} 
-              onPress={currentStep === 5 ? submitApplication : nextStep}
-              disabled={(!validateStep(currentStep) && currentStep < 4) || isSubmitting}
+              style={styles.backButton}
+              onPress={prevStep}
             >
-              <Text style={[
-                currentStep === 5 ? styles.submitButtonText : styles.continueButtonText,
-                (!validateStep(currentStep) && currentStep < 4) && styles.continueButtonTextDisabled
-              ]}>
-                {currentStep === 5 ? (isSubmitting ? 'Submitting...' : 'Submit Application') : 'Continue'}
-              </Text>
+              <Text style={styles.backButtonText}>← Back</Text>
             </TouchableOpacity>
-          ) : null}
+          )}
+          
+          <TouchableOpacity 
+            style={[
+              currentStep === 5 ? styles.submitButton : styles.continueButton,
+              (!validateStep(currentStep) && currentStep < 4) && styles.continueButtonDisabled,
+              isSubmitting && styles.submitButtonDisabled,
+              currentStep === 1 && styles.fullWidthButton
+            ]} 
+            onPress={currentStep === 5 ? submitApplication : nextStep}
+            disabled={(!validateStep(currentStep) && currentStep < 4) || isSubmitting}
+          >
+            <Text style={[
+              currentStep === 5 ? styles.submitButtonText : styles.continueButtonText,
+              (!validateStep(currentStep) && currentStep < 4) && styles.continueButtonTextDisabled
+            ]}>
+              {currentStep === 5 ? (isSubmitting ? 'Submitting...' : 'Submit Application') : 'Continue'}
+            </Text>
+          </TouchableOpacity>
         </View>
-
-        {/* Bank Selection Modal */}
-        {showBankSelection && (
-          <View style={styles.bankSelectionOverlay}>
-            <View style={styles.bankSelectionCard}>
-              <View style={styles.bankSelectionHeader}>
-                <Text style={styles.bankSelectionTitle}>Select a Bank</Text>
-                <TouchableOpacity onPress={() => setShowBankSelection(false)}>
-                  <Text style={styles.closeButton}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {banks.map((bank) => (
-                <TouchableOpacity
-                  key={bank.id}
-                  style={styles.bankOption}
-                  onPress={() => handleBankSelect(bank)}
-                >
-                  <Text style={styles.bankOptionLogo}>{bank.logo}</Text>
-                  <View style={styles.bankOptionInfo}>
-                    <View style={styles.bankOptionHeader}>
-                      <Text style={styles.bankOptionName}>{bank.name}</Text>
-                      <View style={[
-                        styles.verificationBadge,
-                        { backgroundColor: bank.verificationStatus === 'verified' ? '#dcfce7' : 
-                                          bank.verificationStatus === 'pending' ? '#fef3c7' : '#fef2f2' }
-                      ]}>
-                        <Text style={styles.verificationIcon}>
-                          {bank.verificationStatus === 'verified' ? '✅' : 
-                           bank.verificationStatus === 'pending' ? '⏳' : '❌'}
-                        </Text>
-                        <Text style={[
-                          styles.verificationText,
-                          { color: bank.verificationStatus === 'verified' ? '#16a34a' : 
-                                   bank.verificationStatus === 'pending' ? '#d97706' : '#dc2626' }
-                        ]}>
-                          {bank.verificationStatus === 'verified' ? 'Verified' : 
-                           bank.verificationStatus === 'pending' ? 'Pending' : 'Unverified'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.bankOptionDetails}>
-                      {bank.interestRate} • {bank.processingTime} • Max: {bank.maxLoanAmount}
-                    </Text>
-                    <Text style={styles.bankOptionRating}>⭐ {bank.rating}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
       </ScrollView>
 
-      
+      {/* Property Selection Modal */}
+      {showPropertySelection && (
+        <View style={styles.propertySelectionOverlay}>
+          <View style={styles.propertySelectionCard}>
+            <View style={styles.propertySelectionHeader}>
+              <Text style={styles.propertySelectionTitle}>Select a Property</Text>
+              <TouchableOpacity onPress={() => setShowPropertySelection(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {loadingProperties ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#3b82f6" />
+                <Text style={styles.loadingText}>Loading properties...</Text>
+              </View>
+            ) : properties.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyTitle}>No Properties Available</Text>
+                <Text style={styles.emptySubtitle}>No properties found. Please try again later.</Text>
+                <TouchableOpacity 
+                  style={styles.retryButton}
+                  onPress={fetchProperties}
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              properties.map((property: Property) => (
+                <TouchableOpacity
+                  key={property.id}
+                  style={styles.propertyOption}
+                  onPress={() => handlePropertySelect(property)}
+                >
+                  <View style={styles.propertyImageContainer}>
+                    {property.images && property.images.length > 0 ? (
+                      <Image 
+                        source={{ uri: property.images[0] }} 
+                        style={styles.propertyImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={styles.propertyImagePlaceholder}>🏠</Text>
+                    )}
+                  </View>
+                  <View style={styles.propertyOptionInfo}>
+                    <Text style={styles.propertyOptionTitle}>{property.title}</Text>
+                    <Text style={styles.propertyOptionLocation}>📍 {property.location}</Text>
+                    <Text style={styles.propertyOptionPrice}>{property.price.toLocaleString()} د.ت</Text>
+                    {property.bedrooms && property.bathrooms && (
+                      <Text style={styles.propertyOptionDetails}>
+                        {property.bedrooms} bed • {property.bathrooms} bath
+                        {property.area && ` • ${property.area} sq ft`}
+                      </Text>
+                    )}
+                    {property.property_type && (
+                      <Text style={styles.propertyOptionType}>{property.property_type}</Text>
+                    )}
+                    {property.description && (
+                      <Text style={styles.propertyOptionDescription} numberOfLines={2}>
+                        {property.description}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Bank Selection Modal */}
+      {showBankSelection && (
+        <View style={styles.bankSelectionOverlay}>
+          <View style={styles.bankSelectionCard}>
+            <View style={styles.bankSelectionHeader}>
+              <Text style={styles.bankSelectionTitle}>Select a Bank</Text>
+              <TouchableOpacity onPress={() => setShowBankSelection(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {banks.map((bank) => (
+              <TouchableOpacity
+                key={bank.id}
+                style={styles.bankOption}
+                onPress={() => handleBankSelect(bank)}
+              >
+                <Text style={styles.bankOptionLogo}>{bank.logo}</Text>
+                <View style={styles.bankOptionInfo}>
+                  <View style={styles.bankOptionHeader}>
+                    <Text style={styles.bankOptionName}>{bank.name}</Text>
+                    <View style={[
+                      styles.verificationBadge,
+                      { backgroundColor: bank.verificationStatus === 'verified' ? '#dcfce7' : 
+                                        bank.verificationStatus === 'pending' ? '#fef3c7' : '#fef2f2' }
+                    ]}>
+                      <Text style={styles.verificationIcon}>
+                        {bank.verificationStatus === 'verified' ? '✅' : 
+                         bank.verificationStatus === 'pending' ? '⏳' : '❌'}
+                      </Text>
+                      <Text style={[
+                        styles.verificationText,
+                        { color: bank.verificationStatus === 'verified' ? '#16a34a' : 
+                                 bank.verificationStatus === 'pending' ? '#d97706' : '#dc2626' }
+                      ]}>
+                        {bank.verificationStatus === 'verified' ? 'Verified' : 
+                         bank.verificationStatus === 'pending' ? 'Pending' : 'Unverified'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.bankOptionDetails}>
+                    {bank.interestRate} • {bank.processingTime} • Max: {bank.maxLoanAmount}
+                  </Text>
+                  <Text style={styles.bankOptionRating}>⭐ {bank.rating}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -719,11 +903,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   backButtonIcon: {
     fontSize: 20,
@@ -750,27 +929,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   helpIcon: {
     fontSize: 20,
   },
-  // Compact Progress Design
   progressContainer: {
     backgroundColor: '#334155',
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   progressHeader: {
     alignItems: 'center',
@@ -809,96 +977,13 @@ const styles = StyleSheet.create({
     color: '#0ea5e9',
     minWidth: 35,
   },
-  stepDots: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  stepDotContainer: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  stepDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#475569',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  stepDotActive: {
-    backgroundColor: '#0ea5e9',
-  },
-  stepDotCompleted: {
-    backgroundColor: '#10b981',
-  },
-  stepDotNumber: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#94a3b8',
-  },
-  stepDotNumberActive: {
-    color: 'white',
-  },
-  stepDotCheckmark: {
-    fontSize: 12,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  stepDotLabel: {
-    fontSize: 10,
-    color: '#94a3b8',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  stepDotLabelActive: {
-    color: '#0ea5e9',
-    fontWeight: '600',
-  },
-  // Step Content
   stepContentContainer: {
     backgroundColor: '#334155',
     marginHorizontal: 20,
     borderRadius: 16,
     padding: 24,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  // Continue Button
-  continueButtonContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  continueButton: {
-    backgroundColor: '#0ea5e9',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: '#0ea5e9',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueButtonDisabled: {
-    backgroundColor: '#475569',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  continueButtonTextDisabled: {
-    color: '#64748b',
-  },
-  // Step Content
   stepContent: {
     marginBottom: 0,
   },
@@ -916,14 +1001,6 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 24,
   },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  inputGroupHalf: {
-    flex: 1,
-    marginBottom: 24,
-  },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
@@ -938,10 +1015,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#64748b',
     color: '#f8fafc',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
   },
   radioGroup: {
     flexDirection: 'row',
@@ -968,6 +1041,310 @@ const styles = StyleSheet.create({
   radioTextSelected: {
     color: 'white',
   },
+  fileUploadButton: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#64748b',
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fileUploadIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  fileUploadText: {
+    fontSize: 16,
+    color: '#e2e8f0',
+    fontWeight: '500',
+  },
+  uploadedImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  reviewImageContainer: {
+    alignItems: 'flex-end',
+  },
+  reviewImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+  },
+  continueButtonContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backButton: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderWidth: 1,
+    borderColor: '#64748b',
+    flex: 1,
+  },
+  backButtonText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  fullWidthButton: {
+    flex: 1,
+  },
+  continueButton: {
+    backgroundColor: '#0ea5e9',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flex: 1,
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#475569',
+  },
+  continueButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  continueButtonTextDisabled: {
+    color: '#64748b',
+  },
+  submitButton: {
+    backgroundColor: '#10b981',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flex: 1,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#475569',
+  },
+  submitButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Property Selection Styles
+  propertySelector: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#64748b',
+    marginBottom: 20,
+  },
+  propertySelectorLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#e2e8f0',
+    marginBottom: 8,
+  },
+  propertySelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectedProperty: {
+    flex: 1,
+  },
+  propertyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 4,
+  },
+  propertyLocation: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginBottom: 4,
+  },
+  propertyPrice: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#10b981',
+  },
+  propertyDescription: {
+    fontSize: 14,
+    color: '#e2e8f0',
+    marginTop: 4,
+  },
+  propertyDetails: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  propertyType: {
+    fontSize: 12,
+    color: '#0ea5e9',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  propertySelectorPlaceholder: {
+    fontSize: 16,
+    color: '#64748b',
+    flex: 1,
+  },
+  propertySelectorArrow: {
+    fontSize: 20,
+    color: '#94a3b8',
+  },
+  selectedPropertyCard: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#0ea5e9',
+  },
+  selectedPropertyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 12,
+  },
+  propertySelectionOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  propertySelectionCard: {
+    backgroundColor: '#334155',
+    borderRadius: 16,
+    padding: 20,
+    margin: 20,
+    maxHeight: '80%',
+    width: '90%',
+  },
+  propertySelectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  propertySelectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#f8fafc',
+  },
+  closeButton: {
+    fontSize: 20,
+    color: '#94a3b8',
+  },
+  propertyOption: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#64748b',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  propertyImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#64748b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  propertyImage: {
+    width: '100%',
+    height: '100%',
+  },
+  propertyImagePlaceholder: {
+    fontSize: 24,
+  },
+  propertyOptionInfo: {
+    flex: 1,
+  },
+  propertyOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 4,
+  },
+  propertyOptionLocation: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginBottom: 4,
+  },
+  propertyOptionPrice: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#10b981',
+    marginBottom: 4,
+  },
+  propertyOptionDescription: {
+    fontSize: 14,
+    color: '#e2e8f0',
+    marginTop: 4,
+  },
+  propertyOptionDetails: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  propertyOptionType: {
+    fontSize: 12,
+    color: '#0ea5e9',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#94a3b8',
+    fontSize: 16,
+    marginTop: 12,
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#0ea5e9',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Bank Selection Styles
   bankSelector: {
     backgroundColor: '#475569',
     borderRadius: 12,
@@ -1041,100 +1418,6 @@ const styles = StyleSheet.create({
     color: '#f59e0b',
     marginTop: 4,
   },
-  reviewCard: {
-    backgroundColor: '#475569',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#64748b',
-  },
-  reviewSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#f8fafc',
-    marginBottom: 12,
-  },
-  reviewRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  reviewLabel: {
-    fontSize: 14,
-    color: '#94a3b8',
-    fontWeight: '500',
-  },
-  reviewValue: {
-    fontSize: 14,
-    color: '#f8fafc',
-    fontWeight: '600',
-  },
-  navigationButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  backButton: {
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  backButtonText: {
-    color: '#64748b',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  nextButton: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  nextButtonDisabled: {
-    backgroundColor: '#e2e8f0',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  nextButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  nextButtonTextDisabled: {
-    color: '#94a3b8',
-  },
-  submitButton: {
-    backgroundColor: '#10b981',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#e2e8f0',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   bankSelectionOverlay: {
     position: 'absolute',
     top: 0,
@@ -1153,11 +1436,6 @@ const styles = StyleSheet.create({
     margin: 20,
     maxHeight: '80%',
     width: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
   },
   bankSelectionHeader: {
     flexDirection: 'row',
@@ -1169,10 +1447,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#f8fafc',
-  },
-  closeButton: {
-    fontSize: 20,
-    color: '#94a3b8',
   },
   bankOption: {
     flexDirection: 'row',
@@ -1262,54 +1536,41 @@ const styles = StyleSheet.create({
   toggleThumbActive: {
     alignSelf: 'flex-end',
   },
-  insuranceTypeContainer: {
-    gap: 12,
+  insuranceNote: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
-  insuranceTypeOption: {
+  // Review Styles
+  reviewCard: {
     backgroundColor: '#475569',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 2,
+    marginBottom: 16,
+    borderWidth: 1,
     borderColor: '#64748b',
   },
-  insuranceTypeOptionSelected: {
-    backgroundColor: '#334155',
-    borderColor: '#0ea5e9',
-  },
-  insuranceTypeLabel: {
+  reviewSectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e2e8f0',
-    marginBottom: 4,
-  },
-  insuranceTypeLabelSelected: {
     color: '#f8fafc',
+    marginBottom: 12,
   },
-  insuranceTypeDescription: {
+  reviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  reviewLabel: {
     fontSize: 14,
     color: '#94a3b8',
+    fontWeight: '500',
   },
-  insuranceTypeDescriptionSelected: {
-    color: '#e2e8f0',
-  },
-  insuranceInfo: {
-    backgroundColor: '#475569',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#0ea5e9',
-  },
-  insuranceInfoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#f8fafc',
-    marginBottom: 8,
-  },
-  insuranceInfoText: {
+  reviewValue: {
     fontSize: 14,
-    color: '#e2e8f0',
-    lineHeight: 20,
+    color: '#f8fafc',
+    fontWeight: '600',
   },
 });
-
