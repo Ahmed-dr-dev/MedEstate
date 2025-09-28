@@ -90,19 +90,10 @@ export default function BankAgentRegistration() {
       try {
         const response = await fetch(`${API_BASE_URL}/bank-agent-registration?user_id=${user.id}`);
         const result = await response.json();
-
+    
         if (result.success && result.registrations && result.registrations.length > 0) {
           // User already has a registration, redirect to dashboard
-          Alert.alert(
-            'Registration Already Submitted',
-            'You have already submitted a bank agent registration. Please wait for admin review.',
-            [
-              {
-                text: 'Go to Dashboard',
-                onPress: () => router.replace('/Screens/BankAgent/Dashboard'),
-              },
-            ]
-          );
+          router.replace('/Screens/BankAgent/Dashboard');
         } else {
           // No existing registration, allow form access
           setIsCheckingRegistration(false);
@@ -293,41 +284,57 @@ export default function BankAgentRegistration() {
         return;
       }
 
-      // Prepare data for API
-      const registrationData = {
-        personalInfo: {
-          firstName: personalInfo.firstName,
-          lastName: personalInfo.lastName,
-          dateOfBirth: personalInfo.dateOfBirth,
-          nationalId: personalInfo.nationalId,
-          phone: personalInfo.phone,
-          address: personalInfo.address,
-          city: personalInfo.city,
-          postalCode: personalInfo.postalCode,
-        },
-        bankInfo: {
-          bankName: bankInfo.bankName,
-          position: bankInfo.position,
-          employeeId: bankInfo.employeeId,
-          department: bankInfo.department,
-          workAddress: bankInfo.workAddress,
-          supervisorName: bankInfo.supervisorName,
-          supervisorPhone: bankInfo.supervisorPhone,
-        },
-        documents: {
-          nationalIdDocument: documents.nationalIdDocument,
-          bankEmploymentLetter: documents.bankEmploymentLetter,
-        },
-        userId: user.id,
-      };
+      // Prepare form data for API
+      const formData = new FormData();
+      
+      // Add JSON data as strings
+      formData.append('personalInfo', JSON.stringify({
+        firstName: personalInfo.firstName,
+        lastName: personalInfo.lastName,
+        dateOfBirth: personalInfo.dateOfBirth,
+        nationalId: personalInfo.nationalId,
+        phone: personalInfo.phone,
+        address: personalInfo.address,
+        city: personalInfo.city,
+        postalCode: personalInfo.postalCode,
+      }));
+      
+      formData.append('bankInfo', JSON.stringify({
+        bankName: bankInfo.bankName,
+        position: bankInfo.position,
+        employeeId: bankInfo.employeeId,
+        department: bankInfo.department,
+        workAddress: bankInfo.workAddress,
+        supervisorName: bankInfo.supervisorName,
+        supervisorPhone: bankInfo.supervisorPhone,
+      }));
+      
+      formData.append('userId', user.id);
+
+      // Add document files if they exist
+      if (documents.nationalIdDocument) {
+        formData.append('national_id_document', {
+          uri: documents.nationalIdDocument,
+          type: 'image/jpeg',
+          name: 'national_id_document.jpg',
+        } as any);
+      }
+
+      if (documents.bankEmploymentLetter) {
+        formData.append('bank_employment_letter', {
+          uri: documents.bankEmploymentLetter,
+          type: 'image/png',
+          name: 'bank_employment_letter.png',
+        } as any);
+      }
 
       // Submit to backend API
       const response = await fetch(`${API_BASE_URL}/bank-agent-registration`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
         },
-        body: JSON.stringify(registrationData),
+        body: formData,
       });
 
       const result = await response.json();
@@ -358,6 +365,9 @@ export default function BankAgentRegistration() {
 
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
+      <Text style={styles.progressText}>
+        Step {currentStep} of {totalSteps}
+      </Text>
       <View style={styles.progressBar}>
         <View 
           style={[
@@ -366,9 +376,6 @@ export default function BankAgentRegistration() {
           ]} 
         />
       </View>
-      <Text style={styles.progressText}>
-        Step {currentStep} of {totalSteps}
-      </Text>
     </View>
   );
 
@@ -411,11 +418,23 @@ export default function BankAgentRegistration() {
         <TextInput
           style={styles.input}
           value={personalInfo.dateOfBirth}
-          onChangeText={(text) => setPersonalInfo({...personalInfo, dateOfBirth: text})}
+          onChangeText={(text) => {
+            // Auto-format date with / separators
+            let formatted = text.replace(/\D/g, ''); // Remove non-digits
+            if (formatted.length >= 2) {
+              formatted = formatted.substring(0, 2) + '/' + formatted.substring(2);
+            }
+            if (formatted.length >= 5) {
+              formatted = formatted.substring(0, 5) + '/' + formatted.substring(5, 9);
+            }
+            setPersonalInfo({...personalInfo, dateOfBirth: formatted});
+          }}
           placeholder="DD/MM/YYYY"
           placeholderTextColor="#94a3b8"
           autoCorrect={false}
           editable={true}
+          maxLength={10}
+          keyboardType="numeric"
         />
         <Text style={styles.ageNote}>Must be 20 years or older (Format: DD/MM/YYYY)</Text>
       </View>
@@ -664,13 +683,6 @@ export default function BankAgentRegistration() {
       </View>
 
 
-      <View style={styles.noteContainer}>
-        <Text style={styles.noteTitle}>📋 Document Requirements:</Text>
-        <Text style={styles.noteText}>• Take clear, well-lit photos of documents</Text>
-        <Text style={styles.noteText}>• Ensure all text is readable in the photo</Text>
-        <Text style={styles.noteText}>• Avoid shadows and reflections</Text>
-        <Text style={styles.noteText}>• Documents marked with * are required</Text>
-      </View>
     </View>
   );
 
@@ -982,7 +994,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     textAlign: 'center',
-    marginTop: 8,
+    marginBottom: 8,
     fontSize: 12,
     color: '#64748b',
     fontWeight: '500',
@@ -1030,7 +1042,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: '#d1d5db',
-    borderRadius: 12,
+    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
@@ -1080,10 +1092,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   documentItem: {
-    marginBottom: 25,
-    padding: 20,
+    marginBottom: 20,
+    padding: 16,
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -1113,25 +1125,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     fontStyle: 'italic',
-  },
-  noteContainer: {
-    backgroundColor: '#f0f9ff',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3b82f6',
-  },
-  noteTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1e40af',
-    marginBottom: 8,
-  },
-  noteText: {
-    fontSize: 12,
-    color: '#1e40af',
-    marginBottom: 4,
   },
   reviewSection: {
     backgroundColor: 'white',
@@ -1195,7 +1188,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
@@ -1208,7 +1201,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b82f6',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   nextButtonText: {
     color: 'white',
@@ -1219,7 +1212,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   submitButtonText: {
     color: 'white',

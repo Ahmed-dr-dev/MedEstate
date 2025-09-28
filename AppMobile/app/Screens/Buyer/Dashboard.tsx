@@ -103,8 +103,8 @@ export default function BuyerDashboard() {
       const applicationsResult = await applicationsResponse.json();
       
       setStats({
-        savedProperties: favoritesResult.success ? favoritesResult.data.length : 0,
-        loanApplications: applicationsResult.success ? applicationsResult.data.length : 0,
+        savedProperties: favoritesResult.success && favoritesResult.data ? favoritesResult.data.length : 0,
+        loanApplications: applicationsResult.success && applicationsResult.applications ? applicationsResult.applications.length : 0,
         scheduledVisits: 0, // This can be implemented later if needed
       });
     } catch (error) {
@@ -256,6 +256,17 @@ export default function BuyerDashboard() {
               </View>
               <Text style={styles.quickActionTitle}>Post Property</Text>
               <Text style={styles.quickActionSubtitle}>List for sale</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.quickActionCard}
+              onPress={() => router.push('/Screens/Buyer/MyProperties')}
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>📋</Text>
+              </View>
+              <Text style={styles.quickActionTitle}>My Properties</Text>
+              <Text style={styles.quickActionSubtitle}>Manage listings</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 

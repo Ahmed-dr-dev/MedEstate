@@ -33,16 +33,17 @@ interface Property {
   };
 }
 
-interface Bank {
+interface BankAgent {
   id: string;
-  name: string;
-  logo: string;
-  interestRate: string;
-  processingTime: string;
-  maxLoanAmount: string;
-  rating: number;
-  isVerified: boolean;
-  verificationStatus: 'verified' | 'pending' | 'unverified';
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  bank_name: string;
+  position: string;
+  employee_id: string;
+  department: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submitted_at: string;
 }
 
 export default function NewLoanApplication() {
@@ -59,7 +60,9 @@ export default function NewLoanApplication() {
   // Data
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
+  const [selectedBankAgent, setSelectedBankAgent] = useState<BankAgent | null>(null);
+  const [bankAgents, setBankAgents] = useState<BankAgent[]>([]);
+  const [loadingBankAgents, setLoadingBankAgents] = useState(false);
   
   // Form data - standardized object
   const [formData, setFormData] = useState({
@@ -73,41 +76,35 @@ export default function NewLoanApplication() {
     monthlyInsuranceAmount: ''
   });
 
-  const banks: Bank[] = [
-    {
-      id: 'f78cba6f-0328-4d03-ba15-90ef2133d3f5',
-      name: 'First National Bank',
-      logo: '🏦',
-      interestRate: '6.2%',
-      processingTime: '5-7 days',
-      maxLoanAmount: '$2M',
-      rating: 4.8,
-      isVerified: true,
-      verificationStatus: 'verified'
-    },
-    {
-      id: '550e8400-e29b-41d4-a716-446655440002',
-      name: 'Metro Bank',
-      logo: '🏛️',
-      interestRate: '6.5%',
-      processingTime: '7-10 days',
-      maxLoanAmount: '$1.5M',
-      rating: 4.6,
-      isVerified: true,
-      verificationStatus: 'verified'
-    },
-    {
-      id: '550e8400-e29b-41d4-a716-446655440003',
-      name: 'City Bank',
-      logo: '🏢',
-      interestRate: '6.8%',
-      processingTime: '10-14 days',
-      maxLoanAmount: '$3M',
-      rating: 4.4,
-      isVerified: false,
-      verificationStatus: 'pending'
+  const fetchApprovedBankAgents = async () => {
+    try {
+      setLoadingBankAgents(true);
+      console.log('Fetching approved bank agents...');
+      const response = await fetch(`${API_BASE_URL}/bank-agent-registration?fetch_all_approved=true`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Bank agents API response:', result);
+
+      if (result.success) {
+        // Try different possible response structures
+        const agents = result.registrations || result.data || result.bankAgents || [];
+        console.log('Found bank agents:', agents.length);
+        setBankAgents(agents);
+      } else {
+        console.log('API returned error:', result.error);
+        setBankAgents([]);
+      }
+    } catch (error) {
+      console.error('Error fetching bank agents:', error);
+      setBankAgents([]);
+    } finally {
+      setLoadingBankAgents(false);
     }
-  ];
+  };
 
   const steps = [
     { id: 1, title: 'Select Property', description: 'Choose from existing properties' },
@@ -117,9 +114,10 @@ export default function NewLoanApplication() {
     { id: 5, title: 'Review & Submit', description: 'Review and submit application' }
   ];
 
-  // Fetch properties on component mount
+  // Fetch properties and bank agents on component mount
   useEffect(() => {
     fetchProperties();
+    fetchApprovedBankAgents();
   }, []);
 
   const fetchProperties = async () => {
@@ -153,8 +151,8 @@ export default function NewLoanApplication() {
     setShowPropertySelection(false);
   };
 
-  const handleBankSelect = (bank: Bank) => {
-    setSelectedBank(bank);
+  const handleBankAgentSelect = (bankAgent: BankAgent) => {
+    setSelectedBankAgent(bankAgent);
     setShowBankSelection(false);
   };
 
@@ -196,7 +194,7 @@ export default function NewLoanApplication() {
       case 2:
         return formData.employmentStatus !== '' && formData.annualIncome !== '' && formData.identityCard !== null && formData.proofOfIncome !== null;
       case 3:
-        return selectedBank !== null;
+        return selectedBankAgent !== null;
       case 4:
         if (formData.includeInsurance) {
           return formData.monthlyInsuranceAmount !== '' && parseFloat(formData.monthlyInsuranceAmount) > 0;
@@ -237,7 +235,7 @@ export default function NewLoanApplication() {
     try {
       // Calculate monthly payment
       const loanAmountNum = parseFloat(formData.loanAmount);
-      const interestRate = selectedBank ? parseFloat(selectedBank.interestRate.replace('%', '')) : 6.5;
+      const interestRate = 6.5; // Default interest rate since we're using bank agents
       const loanTermYears = parseInt(formData.loanTerm);
       
       const monthlyRate = interestRate / 100 / 12;
@@ -272,7 +270,7 @@ export default function NewLoanApplication() {
       submitFormData.append('monthly_payment', monthlyPayment.toFixed(2));
       submitFormData.append('employment_status', formData.employmentStatus);
       submitFormData.append('annual_income', formData.annualIncome);
-      submitFormData.append('selected_bank_id', selectedBank?.id || '');
+      submitFormData.append('bank_agent_id', selectedBankAgent?.id || '');
       submitFormData.append('include_insurance', formData.includeInsurance.toString());
       if (formData.includeInsurance && formData.monthlyInsuranceAmount) {
         submitFormData.append('monthly_insurance_amount', formData.monthlyInsuranceAmount);
@@ -496,41 +494,41 @@ console.log(submitFormData);
       case 3:
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepContentTitle}>Choose Your Bank</Text>
-            <Text style={styles.stepContentSubtitle}>Select the bank you'd like to apply with</Text>
+            <Text style={styles.stepContentTitle}>Choose Your Bank Agent</Text>
+            <Text style={styles.stepContentSubtitle}>Select an approved bank agent to handle your loan</Text>
             
             <TouchableOpacity 
               style={styles.bankSelector}
               onPress={() => setShowBankSelection(true)}
             >
-              <Text style={styles.bankSelectorLabel}>Select Bank *</Text>
+              <Text style={styles.bankSelectorLabel}>Select Bank Agent *</Text>
               <View style={styles.bankSelectorContent}>
-                {selectedBank ? (
+                {selectedBankAgent ? (
                   <View style={styles.selectedBank}>
-                    <Text style={styles.bankLogo}>{selectedBank.logo}</Text>
+                    <Text style={styles.bankLogo}>🏦</Text>
                     <View>
-                      <Text style={styles.bankName}>{selectedBank.name}</Text>
-                      <Text style={styles.bankRate}>{selectedBank.interestRate} • {selectedBank.processingTime}</Text>
+                      <Text style={styles.bankName}>{selectedBankAgent.bank_name}</Text>
+                      <Text style={styles.bankRate}>{selectedBankAgent.first_name} {selectedBankAgent.last_name} • {selectedBankAgent.position}</Text>
                     </View>
                   </View>
                 ) : (
-                  <Text style={styles.bankSelectorPlaceholder}>Choose a bank...</Text>
+                  <Text style={styles.bankSelectorPlaceholder}>Choose a bank agent...</Text>
                 )}
                 <Text style={styles.bankSelectorArrow}>›</Text>
               </View>
             </TouchableOpacity>
 
-            {selectedBank && (
+            {selectedBankAgent && (
               <View style={styles.selectedBankCard}>
-                <Text style={styles.selectedBankTitle}>Selected Bank</Text>
+                <Text style={styles.selectedBankTitle}>Selected Bank Agent</Text>
                 <View style={styles.selectedBankInfo}>
-                  <Text style={styles.bankLogo}>{selectedBank.logo}</Text>
+                  <Text style={styles.bankLogo}>🏦</Text>
                   <View style={styles.selectedBankDetails}>
-                    <Text style={styles.bankName}>{selectedBank.name}</Text>
-                    <Text style={styles.bankRate}>Interest Rate: {selectedBank.interestRate}</Text>
-                    <Text style={styles.bankRate}>Processing Time: {selectedBank.processingTime}</Text>
-                    <Text style={styles.bankRate}>Max Loan: {selectedBank.maxLoanAmount}</Text>
-                    <Text style={styles.bankRating}>⭐ {selectedBank.rating} Rating</Text>
+                    <Text style={styles.bankName}>{selectedBankAgent.bank_name}</Text>
+                    <Text style={styles.bankRate}>Agent: {selectedBankAgent.first_name} {selectedBankAgent.last_name}</Text>
+                    <Text style={styles.bankRate}>Position: {selectedBankAgent.position}</Text>
+                    <Text style={styles.bankRate}>Department: {selectedBankAgent.department}</Text>
+                    <Text style={styles.bankRating}>Employee ID: {selectedBankAgent.employee_id}</Text>
                   </View>
                 </View>
               </View>
@@ -640,14 +638,22 @@ console.log(submitFormData);
             </View>
 
             <View style={styles.reviewCard}>
-              <Text style={styles.reviewSectionTitle}>Selected Bank</Text>
+              <Text style={styles.reviewSectionTitle}>Selected Bank Agent</Text>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Bank:</Text>
-                <Text style={styles.reviewValue}>{selectedBank?.name}</Text>
+                <Text style={styles.reviewValue}>{selectedBankAgent?.bank_name}</Text>
               </View>
               <View style={styles.reviewRow}>
-                <Text style={styles.reviewLabel}>Interest Rate:</Text>
-                <Text style={styles.reviewValue}>{selectedBank?.interestRate}</Text>
+                <Text style={styles.reviewLabel}>Agent:</Text>
+                <Text style={styles.reviewValue}>{selectedBankAgent?.first_name} {selectedBankAgent?.last_name}</Text>
+              </View>
+              <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Position:</Text>
+                <Text style={styles.reviewValue}>{selectedBankAgent?.position}</Text>
+              </View>
+              <View style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>Department:</Text>
+                <Text style={styles.reviewValue}>{selectedBankAgent?.department}</Text>
               </View>
             </View>
 
@@ -829,48 +835,46 @@ console.log(submitFormData);
         <View style={styles.bankSelectionOverlay}>
           <View style={styles.bankSelectionCard}>
             <View style={styles.bankSelectionHeader}>
-              <Text style={styles.bankSelectionTitle}>Select a Bank</Text>
+              <Text style={styles.bankSelectionTitle}>Select a Bank Agent</Text>
               <TouchableOpacity onPress={() => setShowBankSelection(false)}>
                 <Text style={styles.closeButton}>✕</Text>
               </TouchableOpacity>
             </View>
             
-            {banks.map((bank) => (
-              <TouchableOpacity
-                key={bank.id}
-                style={styles.bankOption}
-                onPress={() => handleBankSelect(bank)}
-              >
-                <Text style={styles.bankOptionLogo}>{bank.logo}</Text>
-                <View style={styles.bankOptionInfo}>
-                  <View style={styles.bankOptionHeader}>
-                    <Text style={styles.bankOptionName}>{bank.name}</Text>
-                    <View style={[
-                      styles.verificationBadge,
-                      { backgroundColor: bank.verificationStatus === 'verified' ? '#dcfce7' : 
-                                        bank.verificationStatus === 'pending' ? '#fef3c7' : '#fef2f2' }
-                    ]}>
-                      <Text style={styles.verificationIcon}>
-                        {bank.verificationStatus === 'verified' ? '✅' : 
-                         bank.verificationStatus === 'pending' ? '⏳' : '❌'}
-                      </Text>
-                      <Text style={[
-                        styles.verificationText,
-                        { color: bank.verificationStatus === 'verified' ? '#16a34a' : 
-                                 bank.verificationStatus === 'pending' ? '#d97706' : '#dc2626' }
-                      ]}>
-                        {bank.verificationStatus === 'verified' ? 'Verified' : 
-                         bank.verificationStatus === 'pending' ? 'Pending' : 'Unverified'}
-                      </Text>
+            {loadingBankAgents ? (
+              <View style={styles.loadingContainerBank}>
+                <Text style={styles.loadingTextBank}>Loading approved bank agents...</Text>
+              </View>
+            ) : bankAgents.length === 0 ? (
+              <View style={styles.noDataContainer}>
+                <Text style={styles.noDataText}>No approved bank agents available</Text>
+              </View>
+            ) : (
+              bankAgents.map((bankAgent) => (
+                <TouchableOpacity
+                  key={bankAgent.id}
+                  style={styles.bankOption}
+                  onPress={() => handleBankAgentSelect(bankAgent)}
+                >
+                  <Text style={styles.bankOptionLogo}>🏦</Text>
+                  <View style={styles.bankOptionInfo}>
+                    <View style={styles.bankOptionHeader}>
+                      <Text style={styles.bankOptionName}>{bankAgent.bank_name}</Text>
+                      <View style={[styles.verificationBadge, { backgroundColor: '#dcfce7' }]}>
+                        <Text style={styles.verificationIcon}>✅</Text>
+                        <Text style={[styles.verificationText, { color: '#16a34a' }]}>
+                          Approved
+                        </Text>
+                      </View>
                     </View>
+                    <Text style={styles.bankOptionDetails}>
+                      {bankAgent.first_name} {bankAgent.last_name} • {bankAgent.position}
+                    </Text>
+                    <Text style={styles.bankOptionRating}>Department: {bankAgent.department}</Text>
                   </View>
-                  <Text style={styles.bankOptionDetails}>
-                    {bank.interestRate} • {bank.processingTime} • Max: {bank.maxLoanAmount}
-                  </Text>
-                  <Text style={styles.bankOptionRating}>⭐ {bank.rating}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </View>
       )}
@@ -1574,5 +1578,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#f8fafc',
     fontWeight: '600',
+  },
+  loadingContainerBank: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingTextBank: {
+    fontSize: 16,
+    color: '#94a3b8',
+  },
+  noDataContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#94a3b8',
+    textAlign: 'center',
   },
 });

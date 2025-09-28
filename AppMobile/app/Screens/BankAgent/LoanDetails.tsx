@@ -8,43 +8,48 @@ import {
   Alert,
   Image,
   TextInput,
+  ActivityIndicator,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { API_BASE_URL } from '@/constants/api';
 
 interface LoanApplication {
   id: string;
-  applicantName: string;
-  propertyTitle: string;
-  propertyPrice: number;
-  loanAmount: number;
-  downPayment: number;
+  applicant_id: string;
+  property_id?: string;
+  loan_amount: number;
+  loan_term_years: number;
+  interest_rate?: number;
+  monthly_payment?: number;
+  employment_status: string;
+  annual_income: number;
+  identity_card_image?: string;
+  proof_of_income_image?: string;
+  bank_agent_id?: string;
+  include_insurance: boolean;
+  monthly_insurance_amount?: number;
   status: 'pending' | 'under_review' | 'approved' | 'rejected';
-  submittedDate: string;
-  personalInfo: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    dateOfBirth: string;
-    ssn: string;
-  };
-  financialInfo: {
-    annualIncome: number;
-    monthlyIncome: number;
-    creditScore?: number;
-    employmentStatus: string;
-    employer: string;
-    jobTitle: string;
-    yearsEmployed: number;
-  };
-  propertyInfo: {
+  submitted_documents: string[];
+  bank_agent_decision?: string;
+  bank_agent_notes?: string;
+  created_at: string;
+  updated_at: string;
+  property?: {
+    id: string;
     title: string;
-    location: string;
     price: number;
-    images: string[];
-    bedrooms: number;
-    bathrooms: number;
-    area: number;
+    location: string;
+    images?: string[];
+    bedrooms?: number;
+    bathrooms?: number;
+    area?: number;
+  };
+  applicant?: {
+    id: string;
+    display_name: string;
+    phone?: string;
   };
 }
 
@@ -61,6 +66,8 @@ export default function LoanDetails() {
   const { id } = useLocalSearchParams();
   const [application, setApplication] = useState<LoanApplication | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [bankAgentDecision, setBankAgentDecision] = useState('');
+  const [decisionText, setDecisionText] = useState('');
   const [insuranceOffers, setInsuranceOffers] = useState<InsuranceOffer[]>([]);
   const [newInsuranceOffer, setNewInsuranceOffer] = useState({
     provider: '',
@@ -70,47 +77,45 @@ export default function LoanDetails() {
     description: '',
   });
   const [showAddInsurance, setShowAddInsurance] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState('');
+  const [selectedImageTitle, setSelectedImageTitle] = useState('');
 
   useEffect(() => {
-    // In a real app, fetch application data by ID
-    // Mock data for demonstration
-    setApplication({
-      id: id as string,
-      applicantName: 'John Doe',
-      propertyTitle: 'Modern Medical Office',
-      propertyPrice: 750000,
-      loanAmount: 600000,
-      downPayment: 150000,
-      status: 'pending',
-      submittedDate: '2024-01-15',
-      personalInfo: {
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@email.com',
-        phone: '(555) 123-4567',
-        dateOfBirth: '1985-03-15',
-        ssn: '***-**-1234',
-      },
-      financialInfo: {
-        annualIncome: 120000,
-        monthlyIncome: 10000,
-        creditScore: 750,
-        employmentStatus: 'employed',
-        employer: 'Medical Corp',
-        jobTitle: 'Senior Doctor',
-        yearsEmployed: 5,
-      },
-      propertyInfo: {
-        title: 'Modern Medical Office',
-        location: 'Downtown Medical District',
-        price: 750000,
-        images: [],
-        bedrooms: 0,
-        bathrooms: 3,
-        area: 2500,
-      },
-    });
+    if (id) {
+      fetchLoanApplication();
+    }
   }, [id]);
+
+  const fetchLoanApplication = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/loan-applications/${id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        console.log('Loan application data received:', JSON.stringify(result.data, null, 2));
+        setApplication(result.data);
+        setReviewNotes(result.data.bank_agent_notes || '');
+        setBankAgentDecision(result.data.bank_agent_decision || '');
+        setDecisionText(result.data.bank_agent_decision || '');
+      } else {
+        console.error('API response error:', result);
+        Alert.alert('Error', result.error || 'Failed to fetch loan application');
+      }
+    } catch (error) {
+      console.error('Error fetching loan application:', error);
+      Alert.alert('Error', 'Failed to fetch loan application. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleApprove = () => {
     Alert.alert(
@@ -121,8 +126,7 @@ export default function LoanDetails() {
         {
           text: 'Approve',
           onPress: () => {
-            setApplication(prev => prev ? { ...prev, status: 'approved' } : null);
-            Alert.alert('Success', 'Loan application has been approved!');
+            submitDecision('approved');
           }
         }
       ]
@@ -139,12 +143,71 @@ export default function LoanDetails() {
           text: 'Reject',
           style: 'destructive',
           onPress: () => {
-            setApplication(prev => prev ? { ...prev, status: 'rejected' } : null);
-            Alert.alert('Rejected', 'Loan application has been rejected.');
+            submitDecision('rejected');
           }
         }
       ]
     );
+  };
+
+  const openImageModal = (imageUrl: string, title: string) => {
+    console.log('Opening image modal:', { imageUrl, title });
+    setSelectedImageUrl(imageUrl);
+    setSelectedImageTitle(title);
+    setImageModalVisible(true);
+  };
+
+  const closeImageModal = () => {
+    setImageModalVisible(false);
+    setSelectedImageUrl('');
+    setSelectedImageTitle('');
+  };
+
+  const submitDecision = async (decision: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/loan-applications/${application?.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: decision,
+          bank_agent_decision: decisionText.trim() || `Loan application ${decision}`,
+          bank_agent_notes: reviewNotes.trim() || `Additional notes for ${decision} decision`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setApplication(prev => prev ? { 
+          ...prev, 
+          status: decision as 'approved' | 'rejected',
+          bank_agent_decision: decisionText.trim() || `Loan application ${decision}`,
+          bank_agent_notes: reviewNotes.trim() || `Additional notes for ${decision} decision`
+        } : null);
+        
+        Alert.alert(
+          'Success', 
+          `Loan application has been ${decision}!`,
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', result.error || 'Failed to update loan application');
+      }
+    } catch (error) {
+      console.error('Error updating loan application:', error);
+      Alert.alert('Error', 'Failed to update loan application. Please try again.');
+    }
   };
 
   const handleAddInsuranceOffer = () => {
@@ -190,15 +253,32 @@ export default function LoanDetails() {
     return 'Poor';
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading loan application...</Text>
+        </View>
+      </View>
+    );
+  }
+
   if (!application) {
     return (
       <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Failed to load loan application</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchLoanApplication}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
+    <>
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -221,24 +301,16 @@ export default function LoanDetails() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Name:</Text>
             <Text style={styles.infoValue}>
-              {application.personalInfo.firstName} {application.personalInfo.lastName}
+              {application.applicant?.display_name || 'N/A'}
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email:</Text>
-            <Text style={styles.infoValue}>{application.personalInfo.email}</Text>
-          </View>
-          <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Phone:</Text>
-            <Text style={styles.infoValue}>{application.personalInfo.phone}</Text>
+            <Text style={styles.infoValue}>{application.applicant?.phone || 'N/A'}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Date of Birth:</Text>
-            <Text style={styles.infoValue}>{application.personalInfo.dateOfBirth}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>SSN:</Text>
-            <Text style={styles.infoValue}>{application.personalInfo.ssn}</Text>
+            <Text style={styles.infoLabel}>Applicant ID:</Text>
+            <Text style={styles.infoValue}>{application.applicant_id}</Text>
           </View>
         </View>
       </View>
@@ -249,39 +321,84 @@ export default function LoanDetails() {
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Annual Income:</Text>
-            <Text style={styles.infoValue}>${application.financialInfo.annualIncome.toLocaleString()}</Text>
+            <Text style={styles.infoValue}>{application.annual_income.toLocaleString()} د.ت</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Monthly Income:</Text>
-            <Text style={styles.infoValue}>${application.financialInfo.monthlyIncome.toLocaleString()}</Text>
+            <Text style={styles.infoValue}>{(application.annual_income / 12).toLocaleString()} د.ت</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Credit Score:</Text>
-            <View style={styles.creditScoreContainer}>
-              <Text style={[styles.infoValue, { color: getCreditScoreColor(application.financialInfo.creditScore) }]}>
-                {application.financialInfo.creditScore || 'N/A'}
-              </Text>
-              <Text style={[styles.creditScoreLabel, { color: getCreditScoreColor(application.financialInfo.creditScore) }]}>
-                {getCreditScoreLabel(application.financialInfo.creditScore)}
-              </Text>
+            <Text style={styles.infoLabel}>Employment Status:</Text>
+            <Text style={styles.infoValue}>{application.employment_status}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Insurance Included:</Text>
+            <Text style={styles.infoValue}>{application.include_insurance ? 'Yes' : 'No'}</Text>
+          </View>
+          {application.include_insurance && application.monthly_insurance_amount && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Monthly Insurance:</Text>
+              <Text style={styles.infoValue}>{application.monthly_insurance_amount} د.ت/month</Text>
             </View>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Employment:</Text>
-            <Text style={styles.infoValue}>{application.financialInfo.employmentStatus}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Employer:</Text>
-            <Text style={styles.infoValue}>{application.financialInfo.employer}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Job Title:</Text>
-            <Text style={styles.infoValue}>{application.financialInfo.jobTitle}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Years Employed:</Text>
-            <Text style={styles.infoValue}>{application.financialInfo.yearsEmployed} years</Text>
-          </View>
+          )}
+        </View>
+      </View>
+
+      {/* Document Images */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Submitted Documents</Text>
+        <View style={styles.documentsContainer}>
+          {application.identity_card_image && (
+            <View style={styles.documentCard}>
+              <Text style={styles.documentTitle}>Identity Card</Text>
+              <TouchableOpacity 
+                style={styles.imageContainer}
+                onPress={() => openImageModal(application.identity_card_image!, 'Identity Card')}
+              >
+                <Image 
+                  source={{ uri: application.identity_card_image }} 
+                  style={styles.documentImage}
+                  resizeMode="cover"
+                  onError={(error) => {
+                    console.log('Identity card image error:', error);
+                    Alert.alert('Image Error', 'Failed to load identity card image');
+                  }}
+                />
+                <View style={styles.imageOverlay}>
+                  <Text style={styles.imageOverlayText}>Tap to view full size</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          {application.proof_of_income_image && (
+            <View style={styles.documentCard}>
+              <Text style={styles.documentTitle}>Proof of Income</Text>
+              <TouchableOpacity 
+                style={styles.imageContainer}
+                onPress={() => openImageModal(application.proof_of_income_image!, 'Proof of Income')}
+              >
+                <Image 
+                  source={{ uri: application.proof_of_income_image }} 
+                  style={styles.documentImage}
+                  resizeMode="cover"
+                  onError={(error) => {
+                    console.log('Proof of income image error:', error);
+                    Alert.alert('Image Error', 'Failed to load proof of income image');
+                  }}
+                />
+                <View style={styles.imageOverlay}>
+                  <Text style={styles.imageOverlayText}>Tap to view full size</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          {!application.identity_card_image && !application.proof_of_income_image && (
+            <View style={styles.noDocumentsContainer}>
+              <Text style={styles.noDocumentsText}>No documents uploaded</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -289,27 +406,39 @@ export default function LoanDetails() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Property Information</Text>
         <View style={styles.infoCard}>
-          <Text style={styles.propertyTitle}>{application.propertyInfo.title}</Text>
-          <Text style={styles.propertyLocation}>{application.propertyInfo.location}</Text>
-          
-          <View style={styles.propertyDetails}>
-            <View style={styles.propertyDetailItem}>
-              <Text style={styles.propertyDetailLabel}>Price</Text>
-              <Text style={styles.propertyDetailValue}>${application.propertyInfo.price.toLocaleString()}</Text>
-            </View>
-            <View style={styles.propertyDetailItem}>
-              <Text style={styles.propertyDetailLabel}>Area</Text>
-              <Text style={styles.propertyDetailValue}>{application.propertyInfo.area} sqft</Text>
-            </View>
-            <View style={styles.propertyDetailItem}>
-              <Text style={styles.propertyDetailLabel}>Bedrooms</Text>
-              <Text style={styles.propertyDetailValue}>{application.propertyInfo.bedrooms}</Text>
-            </View>
-            <View style={styles.propertyDetailItem}>
-              <Text style={styles.propertyDetailLabel}>Bathrooms</Text>
-              <Text style={styles.propertyDetailValue}>{application.propertyInfo.bathrooms}</Text>
-            </View>
-          </View>
+          {application.property ? (
+            <>
+              <Text style={styles.propertyTitle}>{application.property.title}</Text>
+              <Text style={styles.propertyLocation}>{application.property.location}</Text>
+              
+              <View style={styles.propertyDetails}>
+                <View style={styles.propertyDetailItem}>
+                  <Text style={styles.propertyDetailLabel}>Price</Text>
+                  <Text style={styles.propertyDetailValue}>{application.property.price.toLocaleString()} د.ت</Text>
+                </View>
+                {application.property.area && (
+                  <View style={styles.propertyDetailItem}>
+                    <Text style={styles.propertyDetailLabel}>Area</Text>
+                    <Text style={styles.propertyDetailValue}>{application.property.area} sqft</Text>
+                  </View>
+                )}
+                {application.property.bedrooms && (
+                  <View style={styles.propertyDetailItem}>
+                    <Text style={styles.propertyDetailLabel}>Bedrooms</Text>
+                    <Text style={styles.propertyDetailValue}>{application.property.bedrooms}</Text>
+                  </View>
+                )}
+                {application.property.bathrooms && (
+                  <View style={styles.propertyDetailItem}>
+                    <Text style={styles.propertyDetailLabel}>Bathrooms</Text>
+                    <Text style={styles.propertyDetailValue}>{application.property.bathrooms}</Text>
+                  </View>
+                )}
+              </View>
+            </>
+          ) : (
+            <Text style={styles.infoValue}>No property information available</Text>
+          )}
         </View>
       </View>
 
@@ -320,135 +449,64 @@ export default function LoanDetails() {
           <View style={styles.loanDetails}>
             <View style={styles.loanDetailItem}>
               <Text style={styles.loanDetailLabel}>Loan Amount</Text>
-              <Text style={styles.loanDetailValue}>${application.loanAmount.toLocaleString()}</Text>
+              <Text style={styles.loanDetailValue}>{application.loan_amount.toLocaleString()} د.ت</Text>
             </View>
             <View style={styles.loanDetailItem}>
-              <Text style={styles.loanDetailLabel}>Down Payment</Text>
-              <Text style={styles.loanDetailValue}>${application.downPayment.toLocaleString()}</Text>
+              <Text style={styles.loanDetailLabel}>Term</Text>
+              <Text style={styles.loanDetailValue}>{application.loan_term_years} years</Text>
             </View>
-            <View style={styles.loanDetailItem}>
-              <Text style={styles.loanDetailLabel}>LTV Ratio</Text>
-              <Text style={styles.loanDetailValue}>
-                {((application.loanAmount / application.propertyPrice) * 100).toFixed(1)}%
-              </Text>
-            </View>
+            {application.interest_rate && (
+              <View style={styles.loanDetailItem}>
+                <Text style={styles.loanDetailLabel}>Interest Rate</Text>
+                <Text style={styles.loanDetailValue}>{(application.interest_rate * 100).toFixed(2)}%</Text>
+              </View>
+            )}
+            {application.monthly_payment && (
+              <View style={styles.loanDetailItem}>
+                <Text style={styles.loanDetailLabel}>Monthly Payment</Text>
+                <Text style={styles.loanDetailValue}>{application.monthly_payment.toLocaleString()} د.ت</Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
 
-      {/* Review Notes */}
+      {/* Bank Agent Decision */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Review Notes</Text>
-        <TextInput
-          style={styles.notesInput}
-          value={reviewNotes}
-          onChangeText={setReviewNotes}
-          placeholder="Add your review notes here..."
-          placeholderTextColor="rgba(255, 255, 255, 0.5)"
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
-      </View>
-
-      {/* Insurance Offers */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Insurance Offers</Text>
-          <TouchableOpacity
-            style={styles.addInsuranceButton}
-            onPress={() => setShowAddInsurance(!showAddInsurance)}
-          >
-            <Text style={styles.addInsuranceButtonText}>+ Add Offer</Text>
-          </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Bank Agent Decision</Text>
+        <View style={styles.enhancedCard}>
+          <Text style={styles.fieldLabel}>Decision Details *</Text>
+          <TextInput
+            style={styles.enhancedTextInput}
+            value={decisionText}
+            onChangeText={setDecisionText}
+            placeholder="Enter your decision details (e.g., 'Approved - Good credit score, stable income', 'Rejected - Insufficient income, high debt ratio')"
+            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
         </View>
-
-        {showAddInsurance && (
-          <View style={styles.addInsuranceForm}>
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, { flex: 1, marginRight: 8 }]}
-                value={newInsuranceOffer.provider}
-                onChangeText={(value) => setNewInsuranceOffer(prev => ({ ...prev, provider: value }))}
-                placeholder="Insurance Provider"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              />
-              <TextInput
-                style={[styles.input, { flex: 1, marginLeft: 8 }]}
-                value={newInsuranceOffer.type}
-                onChangeText={(value) => setNewInsuranceOffer(prev => ({ ...prev, type: value }))}
-                placeholder="Insurance Type"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              />
-            </View>
-            
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, { flex: 1, marginRight: 8 }]}
-                value={newInsuranceOffer.monthlyPremium}
-                onChangeText={(value) => setNewInsuranceOffer(prev => ({ ...prev, monthlyPremium: value }))}
-                placeholder="Monthly Premium ($)"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                keyboardType="numeric"
-              />
-              <TextInput
-                style={[styles.input, { flex: 1, marginLeft: 8 }]}
-                value={newInsuranceOffer.coverage}
-                onChangeText={(value) => setNewInsuranceOffer(prev => ({ ...prev, coverage: value }))}
-                placeholder="Coverage Amount ($)"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                keyboardType="numeric"
-              />
-            </View>
-            
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={newInsuranceOffer.description}
-              onChangeText={(value) => setNewInsuranceOffer(prev => ({ ...prev, description: value }))}
-              placeholder="Description"
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-            
-            <View style={styles.formButtons}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setShowAddInsurance(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={handleAddInsuranceOffer}
-              >
-                <Text style={styles.addButtonText}>Add Offer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {insuranceOffers.map((offer) => (
-          <View key={offer.id} style={styles.insuranceCard}>
-            <View style={styles.insuranceHeader}>
-              <Text style={styles.insuranceProvider}>{offer.provider}</Text>
-              <Text style={styles.insuranceType}>{offer.type}</Text>
-            </View>
-            <Text style={styles.insuranceDescription}>{offer.description}</Text>
-            <View style={styles.insuranceDetails}>
-              <View style={styles.insuranceDetail}>
-                <Text style={styles.insuranceLabel}>Monthly Premium</Text>
-                <Text style={styles.insuranceValue}>${offer.monthlyPremium}/mo</Text>
-              </View>
-              <View style={styles.insuranceDetail}>
-                <Text style={styles.insuranceLabel}>Coverage</Text>
-                <Text style={styles.insuranceValue}>${offer.coverage.toLocaleString()}</Text>
-              </View>
-            </View>
-          </View>
-        ))}
       </View>
+
+      {/* Additional Notes */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Additional Notes</Text>
+        <View style={styles.enhancedCard}>
+          <Text style={styles.fieldLabel}>Notes & Requirements</Text>
+          <TextInput
+            style={styles.enhancedTextInput}
+            value={reviewNotes}
+            onChangeText={setReviewNotes}
+            placeholder="Add additional notes, requirements, or next steps (e.g., 'Submit additional documents', 'Schedule next meeting', 'Bring extra papers')"
+            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+      </View>
+
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
@@ -468,19 +526,87 @@ export default function LoanDetails() {
 
       <View style={styles.bottomPadding} />
     </ScrollView>
+
+    {/* Full Screen Image Modal */}
+    <Modal
+      visible={imageModalVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={closeImageModal}
+    >
+      <View style={styles.imageModalContainer}>
+        <TouchableOpacity 
+          style={styles.imageModalBackground} 
+          activeOpacity={1}
+          onPress={closeImageModal}
+        >
+          <View style={styles.imageModalContent}>
+            <View style={styles.imageModalHeader}>
+              <Text style={styles.imageModalTitle}>{selectedImageTitle}</Text>
+              <TouchableOpacity 
+                style={styles.imageModalCloseButton}
+                onPress={closeImageModal}
+              >
+                <Text style={styles.imageModalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.imageModalImageContainer}>
+              <Image 
+                source={{ uri: selectedImageUrl }} 
+                style={styles.imageModalImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+    </>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f172a',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
   loadingText: {
     color: 'white',
     fontSize: 18,
     textAlign: 'center',
-    marginTop: 100,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: 'white',
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     paddingTop: 60,
@@ -732,6 +858,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     marginBottom: 20,
+    gap: 12,
   },
   rejectButton: {
     flex: 1,
@@ -739,8 +866,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginRight: 8,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#ef4444',
   },
   rejectButtonText: {
@@ -754,15 +880,155 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginLeft: 8,
+    borderWidth: 2,
+    borderColor: '#10b981',
   },
   approveButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
+  enhancedCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  fieldLabel: {
+    fontSize: 16,
+    color: 'white',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  enhancedTextInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: 'white',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    minHeight: 100,
+  },
+  documentsContainer: {
+    gap: 16,
+  },
+  documentCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  documentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 12,
+  },
+  imageContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  documentImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 12,
+    alignItems: 'center',
+  },
+  imageOverlayText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  noDocumentsContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  noDocumentsText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 16,
+    fontStyle: 'italic',
+  },
+  imageModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalBackground: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalContent: {
+    width: Dimensions.get('window').width - 40,
+    height: Dimensions.get('window').height - 100,
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  imageModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  imageModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+  },
+  imageModalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalCloseText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  imageModalImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  imageModalImage: {
+    width: '100%',
+    height: '100%',
+  },
   bottomPadding: {
     height: 40,
   },
 });
+
+
 

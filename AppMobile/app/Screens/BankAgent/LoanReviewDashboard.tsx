@@ -14,6 +14,7 @@ import {
 import { router } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
 import BottomNavigation from '../../../components/BankAgent/BottomNavigation';
+import { API_BASE_URL } from '../../../constants/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,17 +30,30 @@ interface LoanApplication {
   priority: 'high' | 'medium' | 'low';
 }
 
+interface BankAgentRegistration {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submitted_at: string;
+  bank_name: string;
+  position: string;
+}
+
 export default function LoanReviewDashboard() {
   const { user } = useAuth();
   const [applications, setApplications] = useState<LoanApplication[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [stats, setStats] = useState({
-    totalApplications: 24,
-    pendingReview: 8,
-    approved: 12,
-    rejected: 4,
+    totalApplications: 0,
+    pendingReview: 0,
+    approved: 0,
+    rejected: 0,
   });
+  const [registrationStatus, setRegistrationStatus] = useState<'pending' | 'approved' | 'rejected' | 'not_registered' | 'loading'>('loading');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Animation values
   const floatingAnimation1 = useRef(new Animated.Value(0)).current;
@@ -50,49 +64,13 @@ export default function LoanReviewDashboard() {
 
   const filters = [
     { id: 'all', label: 'All', count: stats.totalApplications },
+    { id: 'approved', label: 'Approved', count: stats.approved },
     { id: 'pending', label: 'Pending', count: stats.pendingReview },
-    { id: 'under_review', label: 'Under Review', count: 6 },
-    { id: 'high_priority', label: 'High Priority', count: 3 },
+    { id: 'rejected', label: 'Rejected', count: stats.rejected },
   ];
 
   useEffect(() => {
-    // Mock data for demonstration
-    const mockApplications: LoanApplication[] = [
-      {
-        id: '1',
-        applicantName: 'Dr. Sarah Johnson',
-        propertyTitle: 'Modern Medical Office Complex',
-        loanAmount: 850000,
-        status: 'pending',
-        submittedDate: '2024-01-20',
-        creditScore: 780,
-        annualIncome: 250000,
-        priority: 'high',
-      },
-      {
-        id: '2',
-        applicantName: 'Michael Chen',
-        propertyTitle: 'Downtown Clinic Space',
-        loanAmount: 650000,
-        status: 'under_review',
-        submittedDate: '2024-01-18',
-        creditScore: 720,
-        annualIncome: 180000,
-        priority: 'medium',
-      },
-      {
-        id: '3',
-        applicantName: 'Dr. Emily Rodriguez',
-        propertyTitle: 'Pediatric Care Center',
-        loanAmount: 920000,
-        status: 'pending',
-        submittedDate: '2024-01-15',
-        creditScore: 810,
-        annualIncome: 320000,
-        priority: 'high',
-      },
-    ];
-    setApplications(mockApplications);
+    checkRegistrationAndFetchLoans();
 
     // Start animations
     const createFloatingAnimation = (animatedValue: Animated.Value, duration: number, delay: number) => {
@@ -131,6 +109,101 @@ export default function LoanReviewDashboard() {
       }),
     ]).start();
   }, []);
+
+  const checkRegistrationAndFetchLoans = async () => {
+    try {
+      if (!user?.id) {
+        setRegistrationStatus('not_registered');
+        setIsLoading(false);
+        return;
+      }
+
+      // Check registration status
+      const registrationResponse = await fetch(`${API_BASE_URL}/bank-agent-registration?user_id=${user.id}`);
+      const registrationResult = await registrationResponse.json();
+
+      if (registrationResult.success && registrationResult.registrations && registrationResult.registrations.length > 0) {
+        const latestRegistration = registrationResult.registrations[0];
+        setRegistrationStatus(latestRegistration.status);
+        
+        // If approved, fetch loan applications
+        if (latestRegistration.status === 'approved') {
+          await fetchLoanApplications();
+        }
+      } else {
+        setRegistrationStatus('not_registered');
+      }
+    } catch (error) {
+      console.error('Error checking registration:', error);
+      setRegistrationStatus('not_registered');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchLoanApplications = async () => {
+    try {
+      console.log('Fetching loan applications for bank agent:', user?.id);
+      const response = await fetch(`${API_BASE_URL}/loan-applications?bank_agent_id=${user?.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Loan applications API response:', result);
+
+      if (result.success) {
+        // Try different possible response structures
+        const applicationsData = result.applications || result.data || result.loanApplications || [];
+        console.log('Found loan applications:', applicationsData.length);
+
+        // Transform API data to match our interface
+        const transformedApplications: LoanApplication[] = applicationsData.map((app: any) => ({
+          id: app.id,
+          applicantName: app.applicant_name || app.applicantName || app.applicant?.display_name || 'Unknown',
+          propertyTitle: app.property_title || app.propertyTitle || app.property?.title || 'Unknown Property',
+          loanAmount: app.loan_amount || app.loanAmount || 0,
+          status: app.status || 'pending',
+          submittedDate: app.submitted_date || app.submittedDate || app.created_at || new Date().toISOString(),
+          creditScore: app.credit_score || app.creditScore,
+          annualIncome: app.annual_income || app.annualIncome || 0,
+          priority: app.priority || 'medium', // Default priority if not provided
+        }));
+
+        setApplications(transformedApplications);
+        
+        // Update stats based on applications
+        const newStats = {
+          totalApplications: transformedApplications.length,
+          pendingReview: transformedApplications.filter(app => app.status === 'pending').length,
+          approved: transformedApplications.filter(app => app.status === 'approved').length,
+          rejected: transformedApplications.filter(app => app.status === 'rejected').length,
+        };
+        setStats(newStats);
+      } else {
+        console.log('API returned error:', result.error);
+        // If no applications or error, set empty array
+        setApplications([]);
+        setStats({
+          totalApplications: 0,
+          pendingReview: 0,
+          approved: 0,
+          rejected: 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching loan applications:', error);
+      // Set empty data on error
+      setApplications([]);
+      setStats({
+        totalApplications: 0,
+        pendingReview: 0,
+        approved: 0,
+        rejected: 0,
+      });
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -229,12 +302,52 @@ export default function LoanReviewDashboard() {
     </View>
   );
 
+  const UnauthorizedAccess = () => (
+    <View style={styles.unauthorizedContainer}>
+      <Text style={styles.unauthorizedIcon}>🚫</Text>
+      <Text style={styles.unauthorizedTitle}>Access Restricted</Text>
+      <Text style={styles.unauthorizedText}>
+        {registrationStatus === 'pending' && 'Your bank agent registration is still under review. Please wait for approval.'}
+        {registrationStatus === 'rejected' && 'Your bank agent registration was rejected. Please contact support.'}
+        {registrationStatus === 'not_registered' && 'You need to complete your bank agent registration to access loan applications.'}
+      </Text>
+      {registrationStatus === 'not_registered' && (
+        <TouchableOpacity 
+          style={styles.registerButton}
+          onPress={() => router.push('/Screens/BankAgent/Registration')}
+        >
+          <Text style={styles.registerButtonText}>Complete Registration</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (registrationStatus !== 'approved') {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <UnauthorizedAccess />
+        <BottomNavigation />
+      </View>
+    );
+  }
+
   const filteredApplications = applications.filter(app => {
     const matchesSearch = app.applicantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          app.propertyTitle.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (selectedFilter === 'all') return matchesSearch;
-    if (selectedFilter === 'high_priority') return matchesSearch && app.priority === 'high';
     return matchesSearch && app.status === selectedFilter;
   });
 
@@ -810,5 +923,52 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: 'white',
+    fontWeight: '500',
+  },
+  unauthorizedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  unauthorizedIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  unauthorizedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  unauthorizedText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  registerButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  registerButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
 import BottomNavigation from '../../../components/BankAgent/BottomNavigation';
+import { API_BASE_URL } from '../../../constants/api';
 
 interface LoanApplication {
   id: string;
@@ -35,6 +36,21 @@ interface BankAgentStats {
   rejectedApplications: number;
 }
 
+interface BankAgentRegistration {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submitted_at: string;
+  bank_name: string;
+  position: string;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  admin_notes?: string | null;
+  rejection_reason?: string | null;
+}
+
 export default function BankAgentDashboard() {
   const { user } = useAuth();
   const router = useRouter();
@@ -45,11 +61,20 @@ export default function BankAgentDashboard() {
   const floatAnim2 = useRef(new Animated.Value(0)).current;
   const floatAnim3 = useRef(new Animated.Value(0)).current;
   
-  // Mock approval status - in real app this would come from backend
-  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
-  const [showApprovalModal, setShowApprovalModal] = useState(true);
+  // Registration status from backend
+  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | 'not_registered'>('not_registered');
+  const [registration, setRegistration] = useState<BankAgentRegistration | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<BankAgentStats>({
+    totalApplications: 0,
+    pendingApplications: 0,
+    approvedApplications: 0,
+    rejectedApplications: 0,
+  });
 
   useEffect(() => {
+    fetchRegistrationStatus();
+    
     // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -87,12 +112,55 @@ export default function BankAgentDashboard() {
     setTimeout(() => createFloatingAnimation(floatAnim3).start(), 2000);
   }, []);
 
-  const [stats] = useState<BankAgentStats>({
-    totalApplications: 24,
-    pendingApplications: 8,
-    approvedApplications: 12,
-    rejectedApplications: 4,
-  });
+  const fetchRegistrationStatus = async () => {
+    try {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/bank-agent-registration?user_id=${user.id}`);
+      const result = await response.json();
+
+      if (result.success && result.registrations && result.registrations.length > 0) {
+        const latestRegistration = result.registrations[0];
+        setRegistration(latestRegistration);
+        setApprovalStatus(latestRegistration.status);
+        
+        // If approved, fetch loan applications
+        if (latestRegistration.status === 'approved') {
+          await fetchLoanApplications();
+        }
+      } else {
+        setApprovalStatus('not_registered');
+      }
+    } catch (error) {
+      console.error('Error fetching registration status:', error);
+      setApprovalStatus('not_registered');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchLoanApplications = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/loan-applications?bank_agent_id=${user?.id}`);
+      const result = await response.json();
+
+      if (result.success && result.applications) {
+        // Update stats based on real loan applications
+        const newStats = {
+          totalApplications: result.applications.length,
+          pendingApplications: result.applications.filter((app: any) => app.status === 'pending').length,
+          approvedApplications: result.applications.filter((app: any) => app.status === 'approved').length,
+          rejectedApplications: result.applications.filter((app: any) => app.status === 'rejected').length,
+        };
+        setStats(newStats);
+      }
+    } catch (error) {
+      console.error('Error fetching loan applications:', error);
+    }
+  };
 
   const [applications] = useState<LoanApplication[]>([
     {
@@ -326,100 +394,110 @@ export default function BankAgentDashboard() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Stats Overview */}
-        <Animated.View 
-          style={[
-            styles.statsSection,
-            {
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          <Text style={styles.sectionTitle}>Application Overview</Text>
-          <View style={styles.statsGrid}>
-            {renderStatCard('Total Applications', stats.totalApplications, '📋', '#3b82f6', 'All loan requests')}
-            {renderStatCard('Pending Review', stats.pendingApplications, '⏳', '#f59e0b', 'Awaiting review')}
-            {renderStatCard('Approved', stats.approvedApplications, '✅', '#10b981', 'Successfully approved')}
-            {renderStatCard('Rejected', stats.rejectedApplications, '❌', '#ef4444', 'Declined applications')}
-          </View>
-        </Animated.View>
+        {/* Stats Overview - Only show if approved */}
+        {approvalStatus === 'approved' && (
+          <Animated.View 
+            style={[
+              styles.statsSection,
+              {
+                transform: [{ translateY: slideAnim }],
+              }
+            ]}
+          >
+            <Text style={styles.sectionTitle}>Application Overview</Text>
+            <View style={styles.statsGrid}>
+              {renderStatCard('Total Applications', stats.totalApplications, '📋', '#3b82f6', 'All loan requests')}
+              {renderStatCard('Pending Review', stats.pendingApplications, '⏳', '#f59e0b', 'Awaiting review')}
+              {renderStatCard('Approved', stats.approvedApplications, '✅', '#10b981', 'Successfully approved')}
+              {renderStatCard('Rejected', stats.rejectedApplications, '❌', '#ef4444', 'Declined applications')}
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Registration Status Info */}
+        {approvalStatus !== 'approved' && (
+          <Animated.View 
+            style={[
+              styles.statsSection,
+              {
+                transform: [{ translateY: slideAnim }],
+              }
+            ]}
+          >
+            <Text style={styles.sectionTitle}>Registration Status</Text>
+            <View style={styles.statusCard}>
+              {approvalStatus === 'pending' && (
+                <>
+                  <Text style={styles.statusCardIcon}>⏳</Text>
+                  <Text style={styles.statusTitle}>Registration Under Review</Text>
+                  <Text style={styles.statusDescription}>
+                    Your bank agent registration is being reviewed. You'll be notified once approved.
+                  </Text>
+                  {registration && (
+                    <Text style={styles.statusDetails}>
+                      Bank: {registration.bank_name} • Position: {registration.position}
+                    </Text>
+                  )}
+                </>
+              )}
+              {approvalStatus === 'rejected' && (
+                <>
+                  <Text style={styles.statusCardIcon}>❌</Text>
+                  <Text style={styles.statusTitle}>Registration Rejected</Text>
+                  <Text style={styles.statusDescription}>
+                    Your bank agent registration was not approved.
+                  </Text>
+                  {registration && (
+                    <View style={styles.rejectionDetails}>
+                      {registration.rejection_reason && (
+                        <View style={styles.rejectionItem}>
+                          <Text style={styles.rejectionLabel}>Rejection Reason:</Text>
+                          <Text style={styles.rejectionValue}>{registration.rejection_reason}</Text>
+                        </View>
+                      )}
+                      {registration.admin_notes && (
+                        <View style={styles.rejectionItem}>
+                          <Text style={styles.rejectionLabel}>Admin Notes:</Text>
+                          <Text style={styles.rejectionValue}>{registration.admin_notes}</Text>
+                        </View>
+                      )}
+                      {registration.reviewed_at && (
+                        <View style={styles.rejectionItem}>
+                          <Text style={styles.rejectionLabel}>Reviewed On:</Text>
+                          <Text style={styles.rejectionValue}>
+                            {new Date(registration.reviewed_at).toLocaleDateString()}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                  <Text style={styles.contactSupport}>
+                    Please contact support for more information or to resubmit your application.
+                  </Text>
+                </>
+              )}
+              {approvalStatus === 'not_registered' && (
+                <>
+                  <Text style={styles.statusCardIcon}>📝</Text>
+                  <Text style={styles.statusTitle}>Registration Required</Text>
+                  <Text style={styles.statusDescription}>
+                    You need to complete your bank agent registration to access the dashboard.
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.registerButton}
+                    onPress={() => router.push('/Screens/BankAgent/Registration')}
+                  >
+                    <Text style={styles.registerButtonText}>Complete Registration</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </Animated.View>
+        )}
 
       </Animated.ScrollView>
 
-      {/* Approval Status Modal */}
-      <Modal
-        visible={showApprovalModal && approvalStatus === 'pending'}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowApprovalModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalIcon}>⏳</Text>
-              <Text style={styles.modalTitle}>Account Under Review</Text>
-            </View>
-            
-            <View style={styles.modalContent}>
-              <Text style={styles.modalDescription}>
-                Your bank agent registration is currently being reviewed by our admin team.
-              </Text>
-              
-              <View style={styles.statusContainer}>
-                <View style={styles.statusItem}>
-                  <Text style={styles.modalStatusIcon}>✅</Text>
-                  <Text style={styles.statusText}>Registration Submitted</Text>
-                </View>
-                <View style={styles.statusItem}>
-                  <Text style={styles.modalStatusIcon}>⏳</Text>
-                  <Text style={styles.statusText}>Under Admin Review</Text>
-                </View>
-                <View style={[styles.statusItem, styles.pendingStatus]}>
-                  <Text style={styles.modalStatusIcon}>⭐</Text>
-                  <Text style={styles.statusText}>Approval Pending</Text>
-                </View>
-              </View>
-              
-              <View style={styles.limitationsContainer}>
-                <Text style={styles.limitationsTitle}>Current Limitations:</Text>
-                <Text style={styles.limitationItem}>• Cannot process loan applications</Text>
-                <Text style={styles.limitationItem}>• Limited access to client data</Text>
-                <Text style={styles.limitationItem}>• Cannot approve/reject loans</Text>
-              </View>
-              
-              <Text style={styles.modalNote}>
-                You will receive a notification once your account is approved. 
-                This typically takes 2-3 business days.
-              </Text>
-            </View>
-            
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalButton}
-                onPress={() => setShowApprovalModal(false)}
-              >
-                <Text style={styles.modalButtonText}>I Understand</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
-      {/* Overlay for pending approval state */}
-      {approvalStatus === 'pending' && !showApprovalModal && (
-        <View style={styles.pendingOverlay}>
-          <TouchableOpacity 
-            style={styles.pendingBanner}
-            onPress={() => setShowApprovalModal(true)}
-          >
-            <Text style={styles.pendingBannerIcon}>⏳</Text>
-            <View style={styles.pendingBannerContent}>
-              <Text style={styles.pendingBannerTitle}>Account Pending Approval</Text>
-              <Text style={styles.pendingBannerSubtitle}>Tap for details</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <BottomNavigation />
     </View>
@@ -856,5 +934,100 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#92400e',
     opacity: 0.8,
+  },
+  rejectedBanner: {
+    backgroundColor: '#fca5a5',
+  },
+  statusCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+  },
+  statusCardIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  statusTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  statusDescription: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  statusDetails: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  registerButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  registerButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  registrationDetails: {
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    width: '100%',
+  },
+  detailsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  detailsItem: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  rejectionDetails: {
+    backgroundColor: '#fef2f2',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    width: '100%',
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  rejectionItem: {
+    marginBottom: 12,
+  },
+  rejectionLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#dc2626',
+    marginBottom: 4,
+  },
+  rejectionValue: {
+    fontSize: 14,
+    color: '#7f1d1d',
+    lineHeight: 20,
+  },
+  contactSupport: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 });

@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from "../../../../lib/supabaseServer";
 
-// GET /api/loan-applications - Get all loan applications for a user
+// GET /api/loan-applications - Get loan applications for a user or bank agent
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const applicant_id = searchParams.get('applicant_id');
+    const bank_agent_id = searchParams.get('bank_agent_id');
 
-    if (!applicant_id) {
+    if (!applicant_id && !bank_agent_id) {
       return NextResponse.json(
-        { success: false, error: 'applicant_id is required' },
+        { success: false, error: 'applicant_id or bank_agent_id is required' },
         { status: 400 }
       );
     }
 
-    const { data: loanApplications, error } = await supabase
+    let query = supabase
       .from('loan_applications')
       .select(`
         *,
@@ -24,10 +25,44 @@ export async function GET(request: NextRequest) {
           price,
           location,
           images
+        ),
+        applicant:profiles!loan_applications_applicant_id_fkey (
+          id,
+          display_name,
+          phone
         )
       `)
-      .eq('applicant_id', applicant_id)
       .order('created_at', { ascending: false });
+
+    // Filter by applicant_id or bank_agent_id
+    if (applicant_id) {
+      query = query.eq('applicant_id', applicant_id);
+    } else if (bank_agent_id) {
+      query = query.eq('bank_agent_id', bank_agent_id);
+    }
+
+    const { data: loanApplications, error } = await query;
+
+    console.log('Loan applications query result:', { 
+      bank_agent_id, 
+      applicant_id, 
+      loanApplicationsCount: loanApplications?.length || 0,
+      error: error?.message 
+    });
+
+    // Debug: Check if there are any loan applications at all
+    if (bank_agent_id && (!loanApplications || loanApplications.length === 0)) {
+      const { data: allApplications, error: allError } = await supabase
+        .from('loan_applications')
+        .select('id, bank_agent_id, applicant_id, status, created_at')
+        .limit(5);
+      
+      console.log('Debug - All loan applications in database:', {
+        totalCount: allApplications?.length || 0,
+        sampleApplications: allApplications,
+        allError: allError?.message
+      });
+    }
 
     if (error) {
       console.error('Error fetching loan applications:', error);
@@ -39,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: loanApplications
+      applications: loanApplications || []
     });
 
   } catch (error) {
@@ -68,7 +103,7 @@ export async function POST(request: NextRequest) {
       const monthly_payment = formData.get('monthly_payment') as string;
       const employment_status = formData.get('employment_status') as string;
       const annual_income = formData.get('annual_income') as string;
-      const selected_bank_id = formData.get('selected_bank_id') as string;
+      const bank_agent_id = formData.get('bank_agent_id') as string;
       const include_insurance = formData.get('include_insurance') === 'true';
       const monthly_insurance_amount = formData.get('monthly_insurance_amount') as string;
       const identity_card = formData.get('identity_card') as File;
@@ -112,6 +147,32 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // If bank_agent_id is provided, verify bank agent registration exists and get the profile ID
+      let bankAgentProfileId = null;
+      if (bank_agent_id && bank_agent_id.trim() !== '') {
+        const { data: bankAgentRegistration, error: bankAgentError } = await supabase
+          .from('bank_agent_registrations')
+          .select('user_id, status')
+          .eq('id', bank_agent_id)
+          .single();
+
+        if (bankAgentError || !bankAgentRegistration) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid bank agent ID' },
+            { status: 400 }
+          );
+        }
+
+        if (bankAgentRegistration.status !== 'approved') {
+          return NextResponse.json(
+            { success: false, error: 'Bank agent is not approved' },
+            { status: 400 }
+          );
+        }
+
+        bankAgentProfileId = bankAgentRegistration.user_id;
+      }
+
       // Create loan application first
       const { data: loanApplication, error: insertError } = await supabase
         .from('loan_applications')
@@ -126,14 +187,13 @@ export async function POST(request: NextRequest) {
           annual_income: parseFloat(annual_income),
           identity_card_image: null, // Will be updated after upload
           proof_of_income_image: null, // Will be updated after upload
-          selected_bank_id: selected_bank_id || null,
+          bank_agent_id: bankAgentProfileId,
           include_insurance: include_insurance || false,
           monthly_insurance_amount: monthly_insurance_amount ? parseFloat(monthly_insurance_amount) : null,
           status: 'pending',
           submitted_documents: [],
           bank_agent_decision: null,
-          bank_agent_notes: null,
-          bank_agent_id: selected_bank_id || null
+          bank_agent_notes: null
         })
         .select('id')
         .single();

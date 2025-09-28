@@ -13,6 +13,11 @@ export async function GET(
       .from('loan_applications')
       .select(`
         *,
+        applicant:profiles!loan_applications_applicant_id_fkey (
+          id,
+          display_name,
+          phone
+        ),
         property:properties!loan_applications_property_id_fkey (
           id,
           title,
@@ -73,7 +78,9 @@ export async function PUT(
       monthly_payment,
       status,
       submitted_documents,
-      loan_decision
+      loan_decision,
+      bank_agent_decision,
+      bank_agent_notes
     } = body;
 
     // Check if loan application exists
@@ -102,6 +109,8 @@ export async function PUT(
     if (status !== undefined) updateData.status = status;
     if (submitted_documents !== undefined) updateData.submitted_documents = submitted_documents;
     if (loan_decision !== undefined) updateData.loan_decision = loan_decision;
+    if (bank_agent_decision !== undefined) updateData.bank_agent_decision = bank_agent_decision;
+    if (bank_agent_notes !== undefined) updateData.bank_agent_notes = bank_agent_notes;
 
     // Update loan application
     const { data: updatedApplication, error: updateError } = await supabase

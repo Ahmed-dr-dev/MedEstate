@@ -85,8 +85,8 @@ export default function LoanApplicationResults() {
       
       const result = await response.json();
       
-      if (result.success && Array.isArray(result.data)) {
-        setApplications(result.data);
+      if (result.success && Array.isArray(result.applications)) {
+        setApplications(result.applications);
       } else {
         console.error('API response error:', result);
         Alert.alert('Error', result.error || 'Failed to fetch loan applications');
@@ -207,14 +207,14 @@ export default function LoanApplicationResults() {
       case 'approved':
         info = {
           title: 'Approval Letter Details',
-          content: `Congratulations! Your loan application for ${propertyTitle} has been approved.\n\nApproval Details:\n• Loan Amount: ${application.loan_amount.toLocaleString()} د.ت\n• Interest Rate: ${application.interest_rate ? (application.interest_rate * 100).toFixed(1) : 'N/A'}%\n• Monthly Payment: ${application.monthly_payment?.toLocaleString()} د.ت\n• Loan Term: ${application.loan_term_years} years\n\nBank Agent Notes:\n${application.bank_agent_notes || 'No additional notes provided.'}\n\nNext Steps:\n1. Review the approval letter\n2. Sign the loan documents\n3. Schedule closing date\n4. Prepare down payment\n\nYour loan officer will contact you within 2 business days to proceed with the closing process.`,
+          content: `Congratulations! Your loan application for ${propertyTitle} has been approved.\n\nApproval Details:\n• Loan Amount: ${application.loan_amount.toLocaleString()} د.ت\n• Interest Rate: ${application.interest_rate ? (application.interest_rate * 100).toFixed(1) : 'N/A'}%\n• Monthly Payment: ${application.monthly_payment?.toLocaleString()} د.ت\n• Loan Term: ${application.loan_term_years} years\n\nBank Agent Decision:\n${application.bank_agent_decision || 'Application approved based on standard criteria.'}\n\nAdditional Notes:\n${application.bank_agent_notes || 'No additional notes provided.'}\n\nNext Steps:\n1. Review the approval letter\n2. Sign the loan documents\n3. Schedule closing date\n4. Prepare down payment\n\nYour loan officer will contact you within 2 business days to proceed with the closing process.`,
           type: 'approved'
         };
         break;
       case 'rejected':
         info = {
           title: 'Rejection Details',
-          content: `Unfortunately, your loan application for ${propertyTitle} was not approved.\n\nRejection Reasons:\n${application.bank_agent_notes || '• Credit score below minimum requirement\n• Debt-to-income ratio too high\n• Insufficient employment history'}\n\nRecommendations:\n1. Improve your credit score by paying down existing debt\n2. Reduce monthly debt payments\n3. Maintain stable employment for 6 more months\n4. Consider a smaller loan amount\n\nYou can reapply after addressing these issues. Our team is available to help you improve your application.`,
+          content: `Unfortunately, your loan application for ${propertyTitle} was not approved.\n\nBank Agent Decision:\n${application.bank_agent_decision || 'Application rejected based on standard criteria.'}\n\nRejection Reasons:\n${application.bank_agent_notes || '• Credit score below minimum requirement\n• Debt-to-income ratio too high\n• Insufficient employment history'}\n\nRecommendations:\n1. Improve your credit score by paying down existing debt\n2. Reduce monthly debt payments\n3. Maintain stable employment for 6 more months\n4. Consider a smaller loan amount\n\nYou can reapply after addressing these issues. Our team is available to help you improve your application.`,
           type: 'rejected'
         };
         break;
@@ -269,6 +269,31 @@ export default function LoanApplicationResults() {
       <View style={styles.statusMessage}>
         <Text style={styles.statusMessageText}>{getStatusMessage(application.status)}</Text>
       </View>
+
+      {/* Bank Agent Decision and Notes */}
+      {(application.status === 'approved' || application.status === 'rejected') && (application.bank_agent_decision || application.bank_agent_notes) && (
+        <View style={styles.decisionContainer}>
+          <View style={styles.decisionHeader}>
+            <Text style={styles.decisionTitle}>
+              {application.status === 'approved' ? '✅ Approval Details' : '❌ Rejection Details'}
+            </Text>
+          </View>
+          
+          {application.bank_agent_decision && (
+            <View style={styles.decisionSection}>
+              <Text style={styles.decisionLabel}>Bank Agent Decision:</Text>
+              <Text style={styles.decisionText}>{application.bank_agent_decision}</Text>
+            </View>
+          )}
+          
+          {application.bank_agent_notes && (
+            <View style={styles.decisionSection}>
+              <Text style={styles.decisionLabel}>Additional Notes:</Text>
+              <Text style={styles.decisionText}>{application.bank_agent_notes}</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={styles.applicationDetails}>
         <View style={styles.detailRow}>
@@ -759,6 +784,38 @@ const styles = StyleSheet.create({
     color: '#0ea5e9',
     fontSize: 14,
     fontWeight: '600',
+  },
+  decisionContainer: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0ea5e9',
+  },
+  decisionHeader: {
+    marginBottom: 12,
+  },
+  decisionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+  },
+  decisionSection: {
+    marginBottom: 12,
+  },
+  decisionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  decisionText: {
+    fontSize: 14,
+    color: '#e2e8f0',
+    lineHeight: 20,
   },
   emptyState: {
     backgroundColor: '#334155',
