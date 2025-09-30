@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,324 +7,253 @@ import {
   StyleSheet,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
+import { API_BASE_URL } from '../../../constants/api';
 
 interface User {
   id: string;
-  name: string;
   email: string;
-  role: 'borrower' | 'bank-agent' | 'admin';
-  status: 'active' | 'inactive' | 'suspended';
-  joinDate: string;
-  lastActive: string;
-  totalLoans: number;
-  completedLoans: number;
+  display_name?: string;
+  phone?: string;
+  role?: string;
+  address?: string;
+  city?: string;
+  profile_picture?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'all' | 'borrower' | 'bank-agent' | 'admin'>('all');
+  const [selectedRole, setSelectedRole] = useState<'all' | 'buyer' | 'bank_agent' | 'admin'>('all');
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [users] = useState<User[]>([
-    {
-      id: '1',
-      name: 'John Smith',
-      email: 'john.smith@email.com',
-      role: 'borrower',
-      status: 'active',
-      joinDate: '2024-01-15',
-      lastActive: '2024-01-20',
-      totalLoans: 2,
-      completedLoans: 1,
-    },
-    {
-      id: '2',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@bank.com',
-      role: 'bank-agent',
-      status: 'active',
-      joinDate: '2024-01-10',
-      lastActive: '2024-01-20',
-      totalLoans: 15,
-      completedLoans: 12,
-    },
-    {
-      id: '3',
-      name: 'Mike Davis',
-      email: 'mike.davis@email.com',
-      role: 'borrower',
-      status: 'inactive',
-      joinDate: '2024-01-05',
-      lastActive: '2024-01-18',
-      totalLoans: 1,
-      completedLoans: 0,
-    },
-    {
-      id: '4',
-      name: 'Emily Wilson',
-      email: 'emily.wilson@metro.com',
-      role: 'bank-agent',
-      status: 'active',
-      joinDate: '2024-01-12',
-      lastActive: '2024-01-20',
-      totalLoans: 8,
-      completedLoans: 6,
-    },
-    {
-      id: '5',
-      name: 'Robert Brown',
-      email: 'robert.brown@email.com',
-      role: 'borrower',
-      status: 'suspended',
-      joinDate: '2024-01-08',
-      lastActive: '2024-01-15',
-      totalLoans: 0,
-      completedLoans: 0,
-    },
-  ]);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const getRoleColor = (role: string) => {
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/admin/users`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setUsers(result.data);
+      } else {
+        Alert.alert('Error', result.error || 'Failed to fetch users');
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      Alert.alert('Error', 'Failed to fetch users. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRoleColor = (role?: string) => {
     switch (role) {
-      case 'admin': return '#8b5cf6';
-      case 'bank-agent': return '#3b82f6';
-      case 'borrower': return '#10b981';
+      case 'admin': return '#dc2626';
+      case 'bank_agent': return '#3b82f6';
+      case 'buyer': return '#10b981';
       default: return '#64748b';
+    }
+  };
+
+  const getRoleIcon = (role?: string) => {
+    switch (role) {
+      case 'admin': return '👑';
+      case 'bank_agent': return '🏦';
+      case 'buyer': return '👤';
+      default: return '❓';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return '#10b981';
-      case 'inactive': return '#f59e0b';
-      case 'suspended': return '#ef4444';
+      case 'approved': return '#10b981';
+      case 'pending': return '#f59e0b';
+      case 'rejected': return '#ef4444';
       default: return '#64748b';
-    }
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'admin': return '👑';
-      case 'bank-agent': return '🏦';
-      case 'borrower': return '👤';
-      default: return '❓';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'active': return '✅';
-      case 'inactive': return '⏸️';
-      case 'suspended': return '🚫';
+      case 'approved': return '✅';
+      case 'pending': return '⏳';
+      case 'rejected': return '❌';
       default: return '❓';
     }
   };
 
-  const handleUserAction = (userId: string, action: 'view' | 'suspend' | 'activate' | 'delete') => {
+  const handleUserAction = (userId: string, action: 'view' | 'contact') => {
     const user = users.find(u => u.id === userId);
-    Alert.alert(
-      'User Management',
-      `What would you like to do with ${user?.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'View Profile',
-          onPress: () => Alert.alert('User Profile', 'Detailed user information would be shown here')
-        },
-        { 
-          text: user?.status === 'active' ? 'Suspend' : 'Activate',
-          style: user?.status === 'active' ? 'destructive' : 'default',
-          onPress: () => Alert.alert('Success', `User ${user?.status === 'active' ? 'suspended' : 'activated'} successfully!`)
-        },
-        { 
-          text: 'Delete User',
-          style: 'destructive',
-          onPress: () => Alert.alert('Success', 'User deleted successfully!')
-        }
-      ]
-    );
+    if (!user) return;
+
+    switch (action) {
+      case 'view':
+        Alert.alert(
+          'User Details',
+          `Name: ${user.display_name || 'N/A'}\nEmail: ${user.email}\nPhone: ${user.phone || 'N/A'}\nRole: ${user.role || 'N/A'}\nCity: ${user.city || 'N/A'}\nJoined: ${new Date(user.created_at).toLocaleDateString()}`
+        );
+        break;
+      case 'contact':
+        Alert.alert('Contact User', `Contact ${user.display_name || 'User'} at ${user.email}`);
+        break;
+    }
   };
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = (user.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = selectedRole === 'all' || user.role === selectedRole;
     return matchesSearch && matchesRole;
   });
 
-  const renderUserCard = (user: User) => (
-    <View key={user.id} style={styles.userCard}>
-      <View style={styles.userHeader}>
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
-        </View>
-        <View style={styles.userBadges}>
-          <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) + '20' }]}>
-            <Text style={styles.roleIcon}>{getRoleIcon(user.role)}</Text>
-            <Text style={[styles.roleText, { color: getRoleColor(user.role) }]}>
-              {user.role.toUpperCase().replace('-', ' ')}
-            </Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(user.status) + '20' }]}>
-            <Text style={styles.statusIcon}>{getStatusIcon(user.status)}</Text>
-            <Text style={[styles.statusText, { color: getStatusColor(user.status) }]}>
-              {user.status.toUpperCase()}
-            </Text>
-          </View>
-        </View>
-      </View>
+  const roleFilters = [
+    { id: 'all', label: 'All Users', count: users.length },
+    { id: 'admin', label: 'Admins', count: users.filter(u => u.role === 'admin').length },
+    { id: 'buyer', label: 'Buyers', count: users.filter(u => u.role === 'buyer').length },
+    { id: 'bank_agent', label: 'Bank Agents', count: users.filter(u => u.role === 'bank_agent').length },
+  ];
 
-      <View style={styles.userDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Join Date:</Text>
-          <Text style={styles.detailValue}>{user.joinDate}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Last Active:</Text>
-          <Text style={styles.detailValue}>{user.lastActive}</Text>
-        </View>
-        {user.role === 'bank-agent' && (
-          <>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Total Loans:</Text>
-              <Text style={styles.detailValue}>{user.totalLoans}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Completed:</Text>
-              <Text style={styles.detailValue}>{user.completedLoans}</Text>
-            </View>
-          </>
-        )}
-        {user.role === 'borrower' && (
-          <>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Loan Applications:</Text>
-              <Text style={styles.detailValue}>{user.totalLoans}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Approved:</Text>
-              <Text style={styles.detailValue}>{user.completedLoans}</Text>
-            </View>
-          </>
-        )}
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={styles.loadingText}>Loading users...</Text>
       </View>
-
-      <View style={styles.userActions}>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.viewButton]}
-          onPress={() => handleUserAction(user.id, 'view')}
-        >
-          <Text style={styles.viewButtonText}>View Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[
-            styles.actionButton, 
-            user.status === 'active' ? styles.suspendButton : styles.activateButton
-          ]}
-          onPress={() => handleUserAction(user.id, user.status === 'active' ? 'suspend' : 'activate')}
-        >
-          <Text style={[
-            user.status === 'active' ? styles.suspendButtonText : styles.activateButtonText
-          ]}>
-            {user.status === 'active' ? 'Suspend' : 'Activate'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const totalUsers = users.length;
-  const activeUsers = users.filter(u => u.status === 'active').length;
-  const bankAgents = users.filter(u => u.role === 'bank-agent').length;
-  const borrowers = users.filter(u => u.role === 'borrower').length;
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.greeting}>User Management 👥</Text>
-        <Text style={styles.userName}>Manage all platform users</Text>
-      </View>
-
-      {/* Stats Overview */}
-      <View style={styles.statsSection}>
-        <Text style={styles.sectionTitle}>User Overview</Text>
-        <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { borderLeftColor: '#3b82f6' }]}>
-            <View style={styles.statHeader}>
-              <View style={styles.statIconContainer}>
-                <Text style={styles.statIcon}>👥</Text>
-              </View>
-              <Text style={[styles.statValue, { color: '#3b82f6' }]}>{totalUsers}</Text>
-            </View>
-            <Text style={styles.statTitle}>Total Users</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: '#10b981' }]}>
-            <View style={styles.statHeader}>
-              <View style={styles.statIconContainer}>
-                <Text style={styles.statIcon}>✅</Text>
-              </View>
-              <Text style={[styles.statValue, { color: '#10b981' }]}>{activeUsers}</Text>
-            </View>
-            <Text style={styles.statTitle}>Active Users</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: '#f59e0b' }]}>
-            <View style={styles.statHeader}>
-              <View style={styles.statIconContainer}>
-                <Text style={styles.statIcon}>🏦</Text>
-              </View>
-              <Text style={[styles.statValue, { color: '#f59e0b' }]}>{bankAgents}</Text>
-            </View>
-            <Text style={styles.statTitle}>Bank Agents</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: '#8b5cf6' }]}>
-            <View style={styles.statHeader}>
-              <View style={styles.statIconContainer}>
-                <Text style={styles.statIcon}>👤</Text>
-              </View>
-              <Text style={[styles.statValue, { color: '#8b5cf6' }]}>{borrowers}</Text>
-            </View>
-            <Text style={styles.statTitle}>Borrowers</Text>
-          </View>
+      {/* Search Bar */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search users..."
+            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
         </View>
       </View>
 
-      {/* Search and Filter */}
-      <View style={styles.filterSection}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search users..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <View style={styles.roleFilter}>
-          {(['all', 'borrower', 'bank-agent', 'admin'] as const).map((role) => (
+      {/* Role Filters */}
+      <View style={styles.filtersSection}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {roleFilters.map((filter) => (
             <TouchableOpacity
-              key={role}
+              key={filter.id}
               style={[
                 styles.filterButton,
-                selectedRole === role && styles.activeFilterButton
+                selectedRole === filter.id && styles.activeFilterButton
               ]}
-              onPress={() => setSelectedRole(role)}
+              onPress={() => setSelectedRole(filter.id as any)}
             >
               <Text style={[
                 styles.filterButtonText,
-                selectedRole === role && styles.activeFilterButtonText
+                selectedRole === filter.id && styles.activeFilterButtonText
               ]}>
-                {role === 'all' ? 'All' : role.replace('-', ' ').toUpperCase()}
+                {filter.label}
               </Text>
+              <View style={[
+                styles.filterBadge,
+                selectedRole === filter.id && styles.activeFilterBadge
+              ]}>
+                <Text style={[
+                  styles.filterBadgeText,
+                  selectedRole === filter.id && styles.activeFilterBadgeText
+                ]}>
+                  {filter.count}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {/* Users List */}
-      <View style={styles.usersSection}>
-        <Text style={styles.sectionTitle}>All Users ({filteredUsers.length})</Text>
-        <View style={styles.usersList}>
-          {filteredUsers.map(renderUserCard)}
-        </View>
-      </View>
+      <ScrollView style={styles.usersList} showsVerticalScrollIndicator={false}>
+        {filteredUsers.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>👥</Text>
+            <Text style={styles.emptyTitle}>No Users Found</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery ? 'No users match your search criteria' : 'No users found for the selected role'}
+            </Text>
+          </View>
+        ) : (
+          filteredUsers.map((user) => (
+            <View key={user.id} style={styles.userCard}>
+              <View style={styles.userHeader}>
+                <View style={styles.userInfo}>
+                  <View style={styles.userAvatar}>
+                    <Text style={styles.userAvatarText}>
+                      {(user.display_name || user.email).charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.userDetails}>
+                    <Text style={styles.userName}>{user.display_name || 'N/A'}</Text>
+                    <Text style={styles.userEmail}>{user.email}</Text>
+                    {user.phone && <Text style={styles.userPhone}>{user.phone}</Text>}
+                    {user.city && <Text style={styles.userPhone}>{user.city}</Text>}
+                  </View>
+                </View>
+                <View style={styles.userStatus}>
+                  <View style={[styles.roleBadge, { backgroundColor: getRoleColor(user.role) }]}>
+                    <Text style={styles.roleIcon}>{getRoleIcon(user.role)}</Text>
+                    <Text style={styles.roleText}>{(user.role || 'USER').replace('_', ' ').toUpperCase()}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {user.address && (
+                <View style={styles.bankAgentInfo}>
+                  <Text style={styles.bankAgentLabel}>Address:</Text>
+                  <Text style={styles.bankAgentText}>{user.address}</Text>
+                </View>
+              )}
+
+              <View style={styles.userActions}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => handleUserAction(user.id, 'view')}
+                >
+                  <Text style={styles.actionButtonText}>View Details</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.contactButton]}
+                  onPress={() => handleUserAction(user.id, 'contact')}
+                >
+                  <Text style={[styles.actionButtonText, styles.contactButtonText]}>Contact</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.userMeta}>
+                <Text style={styles.metaText}>
+                  Joined: {new Date(user.created_at).toLocaleDateString()}
+                </Text>
+                <Text style={styles.metaText}>
+                  Last Updated: {new Date(user.updated_at).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
+
     </View>
   );
 }
@@ -332,103 +261,54 @@ export default function AdminUsers() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-  },
-  header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
-    backgroundColor: 'transparent',
+    paddingVertical: 20,
   },
-  greeting: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  statsSection: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 16,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    padding: 20,
-    width: '47%',
-    borderLeftWidth: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  statHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 40,
   },
-  statIcon: {
-    fontSize: 20,
+  loadingText: {
+    color: 'white',
+    fontSize: 16,
+    marginTop: 12,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  searchSection: {
+    marginBottom: 20,
   },
-  statTitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontWeight: '500',
-  },
-  filterSection: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  searchInput: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 12,
+    opacity: 0.7,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
     color: 'white',
   },
-  roleFilter: {
-    flexDirection: 'row',
-    gap: 8,
+  filtersSection: {
+    marginBottom: 20,
   },
   filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -437,40 +317,70 @@ const styles = StyleSheet.create({
     borderColor: '#3b82f6',
   },
   filterButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 8,
   },
   activeFilterButtonText: {
     color: 'white',
   },
-  usersSection: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
+  filterBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  activeFilterBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  filterBadgeText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  activeFilterBadgeText: {
+    color: 'white',
   },
   usersList: {
-    gap: 16,
+    flex: 1,
   },
   userCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
   },
   userHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  userAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userAvatarText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  userDetails: {
     flex: 1,
   },
   userName: {
@@ -482,94 +392,120 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 2,
   },
-  userBadges: {
+  userPhone: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  userStatus: {
     alignItems: 'flex-end',
-    gap: 8,
   },
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
   },
   roleIcon: {
-    fontSize: 14,
-    marginRight: 6,
+    fontSize: 12,
+    marginRight: 4,
   },
   roleText: {
-    fontSize: 12,
+    color: 'white',
+    fontSize: 10,
     fontWeight: '600',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   statusIcon: {
-    fontSize: 14,
-    marginRight: 6,
+    fontSize: 12,
+    marginRight: 4,
   },
   statusText: {
-    fontSize: 12,
+    color: 'white',
+    fontSize: 10,
     fontWeight: '600',
   },
-  userDetails: {
-    marginBottom: 16,
+  bankAgentInfo: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
   },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  detailLabel: {
-    fontSize: 14,
+  bankAgentLabel: {
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
-    fontWeight: '500',
+    marginBottom: 4,
+    fontWeight: '600',
   },
-  detailValue: {
+  bankAgentText: {
     fontSize: 14,
     color: 'white',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   userActions: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 12,
   },
   actionButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  viewButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  viewButtonText: {
+  contactButton: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  actionButtonText: {
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  suspendButton: {
-    backgroundColor: '#ef4444',
-  },
-  suspendButtonText: {
+  contactButtonText: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
   },
-  activateButton: {
-    backgroundColor: '#10b981',
+  userMeta: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 12,
   },
-  activateButtonText: {
+  metaText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginBottom: 2,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
   },
 });

@@ -52,7 +52,7 @@ export default function EditProperty() {
   const propertyTypes = [
     { id: 'house', label: 'House' },
     { id: 'apartment', label: 'Apartment' },
-    { id: 'villa', label: 'Villa' },
+  
     { id: 'condo', label: 'Condo' },
     { id: 'townhouse', label: 'Townhouse' },
     { id: 'land', label: 'Land' },
@@ -354,7 +354,7 @@ export default function EditProperty() {
               </View>
               
               <View style={[styles.inputGroup, styles.thirdWidth]}>
-                <Text style={styles.inputLabel}>Area (sq ft)</Text>
+                <Text style={styles.inputLabel}>Area (m²)</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.area}

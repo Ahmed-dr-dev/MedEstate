@@ -41,6 +41,25 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onLike, onView, u
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Check if property is already liked from backend
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (!userId) return;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/properties/like-status?user_id=${userId}&property_id=${property.id}`);
+        const result = await response.json();
+        if (result.success) {
+          setIsLiked(result.data.is_liked);
+        }
+      } catch (error) {
+        console.error('Error checking like status:', error);
+        setIsLiked(false);
+      }
+    };
+
+    checkLikeStatus();
+  }, [property.id, userId]);
 
   const handleLike = async () => {
     if (!userId || isLoading) return;
@@ -210,6 +229,7 @@ const styles = StyleSheet.create({
   },
   likedIcon: {
     fontSize: 22,
+    color: '#ef4444',
   },
   propertyTypeBadge: {
     position: 'absolute',

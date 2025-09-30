@@ -392,21 +392,23 @@ export default function LoanApplicationResults() {
       <Modal
         visible={showModal}
         animationType="slide"
-        transparent={true}
+        transparent={false}
         onRequestClose={() => setShowModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.fullScreenModal}>
+          <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
           <View style={styles.modalContent}>
             {selectedApplication && (
               <>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Application Details</Text>
                   <TouchableOpacity 
-                    style={styles.closeButton}
+                    style={styles.backButton}
                     onPress={() => setShowModal(false)}
                   >
-                    <Text style={styles.closeButtonText}>✕</Text>
+                    <Text style={styles.backButtonIcon}>←</Text>
                   </TouchableOpacity>
+                  <Text style={styles.modalTitle}>Application Details</Text>
+                  <View style={styles.backButton} />
                 </View>
 
                 <ScrollView style={styles.modalBody}>
@@ -519,21 +521,23 @@ export default function LoanApplicationResults() {
       <Modal
         visible={showActionInfo}
         animationType="slide"
-        transparent={true}
+        transparent={false}
         onRequestClose={() => setShowActionInfo(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.fullScreenModal}>
+          <StatusBar barStyle="light-content" backgroundColor="#1e293b" />
           <View style={styles.actionInfoModalContent}>
             {actionInfo && (
               <>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>{actionInfo.title}</Text>
                   <TouchableOpacity 
-                    style={styles.closeButton}
+                    style={styles.backButton}
                     onPress={() => setShowActionInfo(false)}
                   >
-                    <Text style={styles.closeButtonText}>✕</Text>
+                    <Text style={styles.backButtonIcon}>←</Text>
                   </TouchableOpacity>
+                  <Text style={styles.modalTitle}>{actionInfo.title}</Text>
+                  <View style={styles.backButton} />
                 </View>
 
                 <ScrollView style={styles.actionInfoBody}>
@@ -869,23 +873,21 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   // Modal Styles
-  modalOverlay: {
+  fullScreenModal: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: '#1e293b',
   },
   modalContent: {
-    backgroundColor: '#334155',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    minHeight: '60%',
+    flex: 1,
+    backgroundColor: '#1e293b',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#475569',
   },
@@ -893,19 +895,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#f8fafc',
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#475569',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    fontSize: 16,
-    color: '#94a3b8',
-    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
   },
   modalBody: {
     flex: 1,
@@ -997,11 +988,8 @@ const styles = StyleSheet.create({
   },
   // Action Info Modal Styles
   actionInfoModalContent: {
-    backgroundColor: '#334155',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '85%',
-    minHeight: '50%',
+    flex: 1,
+    backgroundColor: '#1e293b',
   },
   actionInfoBody: {
     flex: 1,

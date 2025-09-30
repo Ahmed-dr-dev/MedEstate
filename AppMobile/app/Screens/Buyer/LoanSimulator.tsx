@@ -122,9 +122,9 @@ export default function LoanSimulator() {
         const totalInterest = 0;
         const totalPayment = principal;
 
-        // Calculate insurance
+        // Calculate insurance (already monthly amount)
         const monthlyInsurance = loanData.includeInsurance && loanData.insuranceAmount 
-          ? parseFloat(loanData.insuranceAmount) / 12 
+          ? parseFloat(loanData.insuranceAmount) 
           : 0;
         const totalMonthlyPayment = monthlyPayment + monthlyInsurance;
 
@@ -141,9 +141,9 @@ export default function LoanSimulator() {
         const totalInterest = (monthlyPayment * numberOfPayments) - principal;
         const totalPayment = monthlyPayment * numberOfPayments;
 
-        // Calculate insurance
+        // Calculate insurance (already monthly amount)
         const monthlyInsurance = loanData.includeInsurance && loanData.insuranceAmount 
-          ? parseFloat(loanData.insuranceAmount) / 12 
+          ? parseFloat(loanData.insuranceAmount) 
           : 0;
         const totalMonthlyPayment = monthlyPayment + monthlyInsurance;
 
@@ -304,58 +304,26 @@ export default function LoanSimulator() {
 
             {loanData.includeInsurance && (
               <>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Insurance Type</Text>
-                  <View style={styles.insuranceTypeContainer}>
-                    {[
-                      { id: 'homeowners', label: 'Homeowners Insurance', description: 'Comprehensive coverage' },
-                      { id: 'condo', label: 'Condo Insurance', description: 'For condominiums' },
-                      { id: 'renters', label: 'Renters Insurance', description: 'Personal property coverage' }
-                    ].map((type) => (
-                      <TouchableOpacity
-                        key={type.id}
-                        style={[
-                          styles.insuranceTypeOption,
-                          loanData.insuranceType === type.id && styles.insuranceTypeOptionSelected
-                        ]}
-                        onPress={() => updateLoanData('insuranceType', type.id)}
-                      >
-                        <Text style={[
-                          styles.insuranceTypeLabel,
-                          loanData.insuranceType === type.id && styles.insuranceTypeLabelSelected
-                        ]}>
-                          {type.label}
-                        </Text>
-                        <Text style={[
-                          styles.insuranceTypeDescription,
-                          loanData.insuranceType === type.id && styles.insuranceTypeDescriptionSelected
-                        ]}>
-                          {type.description}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Annual Insurance Premium (TND)</Text>
+                  <Text style={styles.inputLabel}>Extra Monthly Amount for Coverage (TND)</Text>
                   <TextInput
                     style={styles.input}
                     value={loanData.insuranceAmount}
                     onChangeText={(value) => updateLoanData('insuranceAmount', value)}
-                    placeholder="Enter annual premium"
+                    placeholder="Enter monthly amount you can pay"
                     keyboardType="numeric"
                     placeholderTextColor="#64748b"
                   />
                 </View>
 
                 <View style={styles.insuranceInfo}>
-                  <Text style={styles.insuranceInfoTitle}>🛡️ Why Property Insurance?</Text>
+                  <Text style={styles.insuranceInfoTitle}>🛡️ Why Extra Coverage?</Text>
                   <Text style={styles.insuranceInfoText}>
-                    • Protects your property from damage (fire, storms, theft)
-                    • Covers liability if someone is injured on your property
-                    • Required by most lenders for mortgage approval
-                    • Provides peace of mind for your investment
+                    • Additional protection beyond basic homeowner's insurance
+                    • Covers unexpected damage (fire, storms, theft, accidents)
+                    • Provides extra peace of mind for your investment
+                    • Customizable coverage based on your budget
                   </Text>
                 </View>
               </>
@@ -371,13 +339,22 @@ export default function LoanSimulator() {
             
             {result ? (
               <View style={styles.resultCard}>
-                <Text style={styles.resultTitle}>Monthly Payment</Text>
-                <Text style={styles.monthlyPaymentAmount}>{result.monthlyPayment} TND</Text>
+                <View style={styles.resultHeader}>
+                  <Text style={styles.resultTitle}>🎉 Your Loan Calculation</Text>
+                  <View style={styles.resultBadge}>
+                    <Text style={styles.resultBadgeText}>Complete</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.monthlyPaymentHighlight}>
+                  <Text style={styles.monthlyPaymentLabel}>Monthly Payment</Text>
+                  <Text style={styles.monthlyPaymentAmount}>{result.monthlyPayment} TND</Text>
+                </View>
                 
                 {loanData.includeInsurance && parseFloat(result.monthlyInsurance) > 0 && (
                   <View style={styles.insuranceBreakdown}>
                     <View style={styles.insuranceRow}>
-                      <Text style={styles.insuranceLabel}>Monthly Insurance:</Text>
+                      <Text style={styles.insuranceLabel}>Extra Coverage:</Text>
                       <Text style={styles.insuranceValue}>{result.monthlyInsurance} TND</Text>
                     </View>
                     <View style={styles.totalPaymentRow}>
@@ -389,29 +366,62 @@ export default function LoanSimulator() {
                 
                 <View style={styles.resultGrid}>
                   <View style={styles.resultItem}>
+                    <View style={styles.resultItemIcon}>
+                      <Text style={styles.resultItemEmoji}>💰</Text>
+                    </View>
                     <View style={styles.resultItemContent}>
                       <Text style={styles.resultLabel}>Total Interest</Text>
                       <Text style={styles.resultValue}>{result.totalInterest} TND</Text>
                     </View>
                   </View>
+                  
                   <View style={styles.resultItem}>
+                    <View style={styles.resultItemIcon}>
+                      <Text style={styles.resultItemEmoji}>📊</Text>
+                    </View>
                     <View style={styles.resultItemContent}>
                       <Text style={styles.resultLabel}>Total Payment</Text>
                       <Text style={styles.resultValue}>{result.totalPayment} TND</Text>
                     </View>
                   </View>
+                  
                   <View style={styles.resultItem}>
+                    <View style={styles.resultItemIcon}>
+                      <Text style={styles.resultItemEmoji}>🏠</Text>
+                    </View>
                     <View style={styles.resultItemContent}>
                       <Text style={styles.resultLabel}>Loan Amount</Text>
                       <Text style={styles.resultValue}>{loanData.propertyValue} TND</Text>
                     </View>
                   </View>
+                  
                   <View style={styles.resultItem}>
+                    <View style={styles.resultItemIcon}>
+                      <Text style={styles.resultItemEmoji}>📈</Text>
+                    </View>
                     <View style={styles.resultItemContent}>
                       <Text style={styles.resultLabel}>Interest Rate</Text>
                       <Text style={styles.resultValue}>{loanData.interestRate}%</Text>
                     </View>
                   </View>
+                </View>
+                
+                <View style={styles.resultSummary}>
+                  <Text style={styles.resultSummaryTitle}>📋 Summary</Text>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Loan Term:</Text>
+                    <Text style={styles.summaryValue}>{loanData.loanTerm} years</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Monthly Payment:</Text>
+                    <Text style={styles.summaryValue}>{result.monthlyPayment} TND</Text>
+                  </View>
+                  {loanData.includeInsurance && parseFloat(result.monthlyInsurance) > 0 && (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>With Extra Coverage:</Text>
+                      <Text style={styles.summaryValue}>{result.totalMonthlyPayment} TND</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             ) : (
@@ -526,63 +536,6 @@ export default function LoanSimulator() {
           ) : null}
         </View>
 
-        {result && (
-          <View style={styles.resultCard}>
-            <View style={styles.resultHeader}>
-              <Text style={styles.resultTitle}>🎉 Your Loan Calculation</Text>
-              <View style={styles.resultBadge}>
-                <Text style={styles.resultBadgeText}>Complete</Text>
-              </View>
-            </View>
-            
-            <View style={styles.monthlyPaymentHighlight}>
-              <Text style={styles.monthlyPaymentLabel}>Monthly Payment</Text>
-              <Text style={styles.monthlyPaymentAmount}>{result.monthlyPayment} TND</Text>
-            </View>
-            
-            <View style={styles.resultGrid}>
-              <View style={styles.resultItem}>
-                <View style={styles.resultItemIcon}>
-                  <Text style={styles.resultItemEmoji}>💰</Text>
-                </View>
-                <View style={styles.resultItemContent}>
-                  <Text style={styles.resultLabel}>Total Interest</Text>
-                  <Text style={styles.resultValue}>{result.totalInterest} TND</Text>
-                </View>
-              </View>
-              
-              <View style={styles.resultItem}>
-                <View style={styles.resultItemIcon}>
-                  <Text style={styles.resultItemEmoji}>📊</Text>
-                </View>
-                <View style={styles.resultItemContent}>
-                  <Text style={styles.resultLabel}>Total Payment</Text>
-                  <Text style={styles.resultValue}>{result.totalPayment} TND</Text>
-                </View>
-              </View>
-              
-              <View style={styles.resultItem}>
-                <View style={styles.resultItemIcon}>
-                  <Text style={styles.resultItemEmoji}>📈</Text>
-                </View>
-                <View style={styles.resultItemContent}>
-                  <Text style={styles.resultLabel}>Loan Amount</Text>
-                  <Text style={styles.resultValue}>{loanData.propertyValue} TND</Text>
-                </View>
-              </View>
-              
-              <View style={styles.resultItem}>
-                <View style={styles.resultItemIcon}>
-                  <Text style={styles.resultItemEmoji}>🏠</Text>
-                </View>
-                <View style={styles.resultItemContent}>
-                  <Text style={styles.resultLabel}>Interest Rate</Text>
-                  <Text style={styles.resultValue}>{loanData.interestRate}%</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
 
       </ScrollView>
 
@@ -846,9 +799,8 @@ const styles = StyleSheet.create({
   resultCard: {
     backgroundColor: '#334155',
     borderRadius: 20,
-    padding: 24,
+    padding: 20,
     marginBottom: 20,
-    marginHorizontal: 20,
     borderWidth: 2,
     borderColor: '#0ea5e9',
     shadowColor: '#0ea5e9',
@@ -856,6 +808,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 5,
+    maxWidth: '100%',
   },
   resultHeader: {
     flexDirection: 'row',
@@ -895,28 +848,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   resultGrid: {
-    gap: 16,
+    gap: 12,
   },
   resultItem: {
     backgroundColor: '#475569',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 2,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
     borderColor: '#64748b',
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   resultItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 8,
   },
   resultItemEmoji: {
-    fontSize: 20,
+    fontSize: 16,
   },
   resultItemContent: {
     flex: 1,
@@ -1168,5 +1122,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#10b981',
+  },
+  resultSummary: {
+    backgroundColor: '#475569',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+  },
+  resultSummaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+    marginBottom: 12,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#f8fafc',
   },
 });

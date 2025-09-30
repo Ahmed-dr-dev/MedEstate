@@ -260,11 +260,11 @@ export default function LoanReviewDashboard() {
       <View style={styles.applicationDetails}>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Loan Amount:</Text>
-          <Text style={styles.detailValue}>${item.loanAmount.toLocaleString()}</Text>
+          <Text style={styles.detailValue}>{item.loanAmount.toLocaleString()} TND</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Annual Income:</Text>
-          <Text style={styles.detailValue}>${item.annualIncome.toLocaleString()}</Text>
+          <Text style={styles.detailValue}>{item.annualIncome.toLocaleString()} TND</Text>
         </View>
         {item.creditScore && (
           <View style={styles.detailRow}>

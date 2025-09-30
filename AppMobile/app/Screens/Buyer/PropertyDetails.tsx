@@ -57,6 +57,20 @@ export default function PropertyDetailsScreen() {
       
       if (result.success) {
         setProperty(result.data);
+        
+        // Check if property is already liked from backend
+        if (user?.id) {
+          try {
+            const response = await fetch(`${API_BASE_URL}/properties/like-status?user_id=${user.id}&property_id=${propertyId}`);
+            const result = await response.json();
+            if (result.success) {
+              setIsLiked(result.data.is_liked);
+            }
+          } catch (error) {
+            console.error('Error checking like status:', error);
+            setIsLiked(false);
+          }
+        }
       } else {
         Alert.alert('Error', 'Failed to load property details');
         router.back();
@@ -353,6 +367,7 @@ const styles = StyleSheet.create({
   },
   likedIcon: {
     fontSize: 22,
+    color: '#ef4444',
   },
   closeButton: {
     position: 'absolute',

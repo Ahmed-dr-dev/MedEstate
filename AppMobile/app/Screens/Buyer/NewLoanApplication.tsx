@@ -390,26 +390,15 @@ console.log(submitFormData);
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Loan Term *</Text>
-              <View style={styles.radioGroup}>
-                {['15', '20', '25', '30'].map((term) => (
-                  <TouchableOpacity
-                    key={term}
-                    style={[
-                      styles.radioOption,
-                      formData.loanTerm === term && styles.radioOptionSelected
-                    ]}
-                    onPress={() => setFormData(prev => ({ ...prev, loanTerm: term }))}
-                  >
-                    <Text style={[
-                      styles.radioText,
-                      formData.loanTerm === term && styles.radioTextSelected
-                    ]}>
-                      {term} years
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <Text style={styles.inputLabel}>Loan Term (Years) *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.loanTerm}
+                onChangeText={(value) => setFormData(prev => ({ ...prev, loanTerm: value }))}
+                placeholder="Enter loan term (e.g., 15, 20, 25, 30)"
+                keyboardType="numeric"
+                placeholderTextColor="#94a3b8"
+              />
             </View>
           </View>
         );

@@ -14,11 +14,12 @@ import AdminNavigation from './AdminNavigation';
 import AdminStatsOverview from './AdminStatsOverview';
 import BankAgentVerification from './BankAgentVerification';
 import AdminUsers from './AdminUsers';
+import AdminProfile from './AdminProfile';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
-type DashboardTab = 'overview' | 'bank-agents' | 'users';
+type DashboardTab = 'overview' | 'bank-agents' | 'users' | 'profile';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -76,6 +77,8 @@ export default function AdminDashboard() {
         return <BankAgentVerification />;
       case 'users':
         return <AdminUsers />;
+      case 'profile':
+        return <AdminProfile />;
       default:
         return <AdminStatsOverview />;
     }

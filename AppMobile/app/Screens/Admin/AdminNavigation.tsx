@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 
-type DashboardTab = 'overview' | 'bank-agents' | 'users';
+type DashboardTab = 'overview' | 'bank-agents' | 'users' | 'profile';
 
 interface AdminNavigationProps {
   activeTab: DashboardTab;
@@ -13,6 +13,7 @@ export default function AdminNavigation({ activeTab, onTabChange }: AdminNavigat
     { id: 'overview' as DashboardTab, label: 'Overview', icon: '📊' },
     { id: 'bank-agents' as DashboardTab, label: 'Bank Agents', icon: '🏦' },
     { id: 'users' as DashboardTab, label: 'Users', icon: '👥' },
+    { id: 'profile' as DashboardTab, label: 'Profile', icon: '👤' },
   ];
 
   return (

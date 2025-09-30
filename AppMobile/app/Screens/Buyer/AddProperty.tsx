@@ -157,7 +157,7 @@ export default function AddProperty() {
     }
 
     if (!area.trim() || isNaN(Number(area))) {
-      Alert.alert('Error', 'Please enter valid area in square feet');
+      Alert.alert('Error', 'Please enter valid area in square meters');
       return false;
     }
 
@@ -296,7 +296,7 @@ export default function AddProperty() {
             
             <View style={styles.row}>
               <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Price ($) *</Text>
+                <Text style={styles.label}>Price (TND) *</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.price}
@@ -307,7 +307,7 @@ export default function AddProperty() {
                 />
               </View>
               <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>Area (sqft) *</Text>
+                <Text style={styles.label}>Area (m²) *</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.area}
