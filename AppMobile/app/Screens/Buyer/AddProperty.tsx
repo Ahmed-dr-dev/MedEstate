@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '@/constants/api';
-import { getProfileId } from '@/lib/auth';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/contexts/AuthContext';
 interface PropertyFormData {
