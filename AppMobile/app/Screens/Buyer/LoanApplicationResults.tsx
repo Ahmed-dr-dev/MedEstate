@@ -207,28 +207,28 @@ export default function LoanApplicationResults() {
       case 'approved':
         info = {
           title: 'Approval Letter Details',
-          content: `Congratulations! Your loan application for ${propertyTitle} has been approved.\n\nApproval Details:\n• Loan Amount: ${application.loan_amount.toLocaleString()} د.ت\n• Interest Rate: ${application.interest_rate ? (application.interest_rate * 100).toFixed(1) : 'N/A'}%\n• Monthly Payment: ${application.monthly_payment?.toLocaleString()} د.ت\n• Loan Term: ${application.loan_term_years} years\n\nBank Agent Decision:\n${application.bank_agent_decision || 'Application approved based on standard criteria.'}\n\nAdditional Notes:\n${application.bank_agent_notes || 'No additional notes provided.'}\n\nNext Steps:\n1. Review the approval letter\n2. Sign the loan documents\n3. Schedule closing date\n4. Prepare down payment\n\nYour loan officer will contact you within 2 business days to proceed with the closing process.`,
+          content: `Congratulations! Your loan application for ${propertyTitle} has been approved by our bank agent.\n\nApproval Details:\n• Loan Amount: ${application.loan_amount.toLocaleString()} د.ت\n• Interest Rate: ${application.interest_rate ? (application.interest_rate * 100).toFixed(1) : 'N/A'}%\n• Monthly Payment: ${application.monthly_payment?.toLocaleString()} د.ت\n• Loan Term: ${application.loan_term_years} years\n• Selected Bank: ${getBankName(application.selected_bank_id)}\n\nBank Agent Decision:\n${application.bank_agent_decision || 'Application approved based on standard criteria.'}\n\nAdditional Notes:\n${application.bank_agent_notes || 'No additional notes provided.'}\n\nNext Steps:\n1. Review the approval letter\n2. Sign the loan documents\n3. Schedule closing date with your selected bank\n4. Prepare down payment\n\nYour loan officer will contact you within 2 business days to proceed with the closing process.`,
           type: 'approved'
         };
         break;
       case 'rejected':
         info = {
           title: 'Rejection Details',
-          content: `Unfortunately, your loan application for ${propertyTitle} was not approved.\n\nBank Agent Decision:\n${application.bank_agent_decision || 'Application rejected based on standard criteria.'}\n\nRejection Reasons:\n${application.bank_agent_notes || '• Credit score below minimum requirement\n• Debt-to-income ratio too high\n• Insufficient employment history'}\n\nRecommendations:\n1. Improve your credit score by paying down existing debt\n2. Reduce monthly debt payments\n3. Maintain stable employment for 6 more months\n4. Consider a smaller loan amount\n\nYou can reapply after addressing these issues. Our team is available to help you improve your application.`,
+          content: `Unfortunately, your loan application for ${propertyTitle} was not approved by our bank agent.\n\nSelected Bank: ${getBankName(application.selected_bank_id)}\n\nBank Agent Decision:\n${application.bank_agent_decision || 'Application rejected based on standard criteria.'}\n\nRejection Reasons:\n${application.bank_agent_notes || '• Credit score below minimum requirement\n• Debt-to-income ratio too high\n• Insufficient employment history'}\n\nRecommendations:\n1. Improve your credit score by paying down existing debt\n2. Reduce monthly debt payments\n3. Maintain stable employment for 6 more months\n4. Consider a smaller loan amount\n\nYou can reapply after addressing these issues. Our team is available to help you improve your application.`,
           type: 'rejected'
         };
         break;
       case 'pending':
         info = {
           title: 'Application Progress',
-          content: `Your loan application for ${propertyTitle} is currently being processed.\n\nCurrent Status:\n• Application submitted: ${new Date(application.created_at).toLocaleDateString()}\n• Initial review: Completed\n• Document verification: In progress\n• Credit check: Completed\n• Property appraisal: Scheduled\n\nExpected Timeline:\n• Document review: 2-3 business days\n• Property appraisal: 5-7 business days\n• Final decision: Within 7-10 business days\n\nWhat's Next:\n• Our team will contact you if additional documents are needed\n• You'll receive updates via email and SMS\n• Final decision will be communicated within 7-10 business days\n\nYou can track your application status in real-time through our online portal.`,
+          content: `Your loan application for ${propertyTitle} is currently being processed by our bank agent.\n\nSelected Bank: ${getBankName(application.selected_bank_id)}\n\nCurrent Status:\n• Application submitted: ${new Date(application.created_at).toLocaleDateString()}\n• Initial review: Completed\n• Document verification: In progress\n• Credit check: Completed\n• Property appraisal: Scheduled\n\nExpected Timeline:\n• Document review: 2-3 business days\n• Property appraisal: 5-7 business days\n• Final decision: Within 7-10 business days\n\nWhat's Next:\n• Our bank agent will contact you if additional documents are needed\n• You'll receive updates via email and SMS\n• Final decision will be communicated within 7-10 business days\n\nYou can track your application status in real-time through our online portal.`,
           type: 'pending'
         };
         break;
       case 'under_review':
         info = {
           title: 'Bank Contact Information',
-          content: `Contact the bank for your loan application regarding ${propertyTitle}.\n\nApplication Reference:\n• Application ID: LA-${application.id.slice(-6)}\n• Property: ${propertyTitle}\n• Loan Amount: ${application.loan_amount.toLocaleString()} د.ت\n• Bank Agent ID: ${application.bank_agent_id}\n\nWhat to Discuss:\n• Current application status\n• Required documentation\n• Timeline updates\n• Any questions or concerns\n\nPlease have your application reference number ready when calling. The loan officer will have access to your complete application file.`,
+          content: `Contact our bank agent for your loan application regarding ${propertyTitle}.\n\nApplication Reference:\n• Application ID: LA-${application.id.slice(-6)}\n• Property: ${propertyTitle}\n• Selected Bank: ${getBankName(application.selected_bank_id)}\n• Loan Amount: ${application.loan_amount.toLocaleString()} د.ت\n• Bank Agent ID: ${application.bank_agent_id || 'default-bank-agent-id'}\n\nWhat to Discuss:\n• Current application status\n• Required documentation\n• Timeline updates\n• Any questions or concerns\n\nPlease have your application reference number ready when calling. The bank agent will have access to your complete application file.`,
           type: 'under_review'
         };
         break;
@@ -240,11 +240,16 @@ export default function LoanApplicationResults() {
 
   const getBankName = (bankId?: string) => {
     const bankMap: { [key: string]: string } = {
-      '550e8400-e29b-41d4-a716-446655440001': 'First National Bank',
-      '550e8400-e29b-41d4-a716-446655440002': 'Metro Bank',
-      '550e8400-e29b-41d4-a716-446655440003': 'City Bank'
+      '1': 'Banque de Tunisie',
+      '2': 'Banque Internationale Arabe de Tunisie (BIAT)',
+      '3': 'Banque de l\'Habitat (BH)',
+      '4': 'Attijari Bank',
+      '5': 'Banque Zitouna',
+      '6': 'Banque Nationale Agricole (BNA)',
+      '7': 'Qatar National Bank (QNB)',
+      '8': 'Arab Tunisian Bank (ATB)'
     };
-    return bankMap[bankId || ''] || 'Unknown Bank';
+    return bankMap[bankId || ''] || 'Selected Bank';
   };
 
   const renderApplicationCard = (application: LoanApplication) => (

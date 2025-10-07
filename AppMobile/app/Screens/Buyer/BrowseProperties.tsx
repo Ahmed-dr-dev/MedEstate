@@ -41,6 +41,7 @@ export default function BrowseProperties() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [selectedDeveloper, setSelectedDeveloper] = useState('dubai');
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -93,7 +94,7 @@ export default function BrowseProperties() {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/properties`);
+      const response = await fetch(`${API_BASE_URL}/properties?developer=${selectedDeveloper}`);
       const result = await response.json();
       
       if (result.success) {
@@ -110,7 +111,7 @@ export default function BrowseProperties() {
 
   useEffect(() => {
     fetchProperties();
-  }, []);
+  }, [selectedDeveloper]);
 
   const filters = [
     { key: 'all', label: 'All' },
@@ -217,6 +218,41 @@ export default function BrowseProperties() {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
+          </View>
+        </View>
+
+        {/* Developer Selection */}
+        <View style={styles.developerSection}>
+          <Text style={styles.developerSectionTitle}>Select Developer</Text>
+          <View style={styles.developerToggle}>
+            <TouchableOpacity
+              style={[
+                styles.developerOption,
+                selectedDeveloper === 'dubai' && styles.activeDeveloperOption
+              ]}
+              onPress={() => setSelectedDeveloper('dubai')}
+            >
+              <Text style={[
+                styles.developerOptionText,
+                selectedDeveloper === 'dubai' && styles.activeDeveloperOptionText
+              ]}>
+                🏙️ Dubai (Acube)
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.developerOption,
+                selectedDeveloper === 'esgaiher' && styles.activeDeveloperOption
+              ]}
+              onPress={() => setSelectedDeveloper('esgaiher')}
+            >
+              <Text style={[
+                styles.developerOptionText,
+                selectedDeveloper === 'esgaiher' && styles.activeDeveloperOptionText
+              ]}>
+                🏛️ Tunisia (Esghaier)
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -390,6 +426,45 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: 'white',
+  },
+  developerSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 12,
+  },
+  developerSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginBottom: 12,
+  },
+  developerToggle: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  developerOption: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  activeDeveloperOption: {
+    backgroundColor: '#3b82f6',
+  },
+  developerOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+  },
+  activeDeveloperOptionText: {
+    color: 'white',
+    fontWeight: '600',
   },
   filtersSection: {
     paddingVertical: 16,

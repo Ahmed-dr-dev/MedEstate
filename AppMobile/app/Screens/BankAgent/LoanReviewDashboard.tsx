@@ -30,16 +30,6 @@ interface LoanApplication {
   priority: 'high' | 'medium' | 'low';
 }
 
-interface BankAgentRegistration {
-  id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submitted_at: string;
-  bank_name: string;
-  position: string;
-}
 
 export default function LoanReviewDashboard() {
   const { user } = useAuth();
@@ -52,8 +42,7 @@ export default function LoanReviewDashboard() {
     approved: 0,
     rejected: 0,
   });
-  const [registrationStatus, setRegistrationStatus] = useState<'pending' | 'approved' | 'rejected' | 'not_registered' | 'loading'>('loading');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Animation values
   const floatingAnimation1 = useRef(new Animated.Value(0)).current;
@@ -70,7 +59,7 @@ export default function LoanReviewDashboard() {
   ];
 
   useEffect(() => {
-    checkRegistrationAndFetchLoans();
+    fetchLoanApplications();
 
     // Start animations
     const createFloatingAnimation = (animatedValue: Animated.Value, duration: number, delay: number) => {
@@ -110,41 +99,11 @@ export default function LoanReviewDashboard() {
     ]).start();
   }, []);
 
-  const checkRegistrationAndFetchLoans = async () => {
-    try {
-      if (!user?.id) {
-        setRegistrationStatus('not_registered');
-        setIsLoading(false);
-        return;
-      }
-
-      // Check registration status
-      const registrationResponse = await fetch(`${API_BASE_URL}/bank-agent-registration?user_id=${user.id}`);
-      const registrationResult = await registrationResponse.json();
-
-      if (registrationResult.success && registrationResult.registrations && registrationResult.registrations.length > 0) {
-        const latestRegistration = registrationResult.registrations[0];
-        setRegistrationStatus(latestRegistration.status);
-        
-        // If approved, fetch loan applications
-        if (latestRegistration.status === 'approved') {
-          await fetchLoanApplications();
-        }
-      } else {
-        setRegistrationStatus('not_registered');
-      }
-    } catch (error) {
-      console.error('Error checking registration:', error);
-      setRegistrationStatus('not_registered');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchLoanApplications = async () => {
     try {
-      console.log('Fetching loan applications for bank agent:', user?.id);
-      const response = await fetch(`${API_BASE_URL}/loan-applications?bank_agent_id=${user?.id}`);
+      console.log('Fetching all loan applications');
+      const response = await fetch(`${API_BASE_URL}/loan-applications`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -302,25 +261,6 @@ export default function LoanReviewDashboard() {
     </View>
   );
 
-  const UnauthorizedAccess = () => (
-    <View style={styles.unauthorizedContainer}>
-      <Text style={styles.unauthorizedIcon}>🚫</Text>
-      <Text style={styles.unauthorizedTitle}>Access Restricted</Text>
-      <Text style={styles.unauthorizedText}>
-        {registrationStatus === 'pending' && 'Your bank agent registration is still under review. Please wait for approval.'}
-        {registrationStatus === 'rejected' && 'Your bank agent registration was rejected. Please contact support.'}
-        {registrationStatus === 'not_registered' && 'You need to complete your bank agent registration to access loan applications.'}
-      </Text>
-      {registrationStatus === 'not_registered' && (
-        <TouchableOpacity 
-          style={styles.registerButton}
-          onPress={() => router.push('/Screens/BankAgent/Registration')}
-        >
-          <Text style={styles.registerButtonText}>Complete Registration</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
 
   if (isLoading) {
     return (
@@ -333,15 +273,6 @@ export default function LoanReviewDashboard() {
     );
   }
 
-  if (registrationStatus !== 'approved') {
-    return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-        <UnauthorizedAccess />
-        <BottomNavigation />
-      </View>
-    );
-  }
 
   const filteredApplications = applications.filter(app => {
     const matchesSearch = app.applicantName.toLowerCase().includes(searchQuery.toLowerCase()) ||

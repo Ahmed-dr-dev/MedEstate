@@ -24,7 +24,7 @@ interface FormData {
   phone: string;
   password: string;
   confirmPassword: string;
-  role: 'buyer' | 'seller' | 'bank_agent' | 'admin';
+  role: 'buyer' | 'bank_agent' ;
 }
 
 export default function SignUpScreen() {
@@ -41,9 +41,8 @@ export default function SignUpScreen() {
 
   const roles = [
     { value: 'buyer', label: 'Buyer', description: 'Looking to purchase  properties' },
-    { value: 'seller', label: 'Seller', description: 'Selling  properties' },
     { value: 'bank_agent', label: 'Bank Agent', description: 'Financial institution representative' },
-    { value: 'admin', label: 'Admin', description: 'Platform administrator' }
+
   ];
 
   const handleInputChange = (field: keyof FormData, value: string) => {

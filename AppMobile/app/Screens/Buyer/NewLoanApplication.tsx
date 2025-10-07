@@ -33,17 +33,11 @@ interface Property {
   };
 }
 
-interface BankAgent {
+interface Bank {
   id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  bank_name: string;
-  position: string;
-  employee_id: string;
-  department: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submitted_at: string;
+  name: string;
+  logo: any;
+  description: string;
 }
 
 export default function NewLoanApplication() {
@@ -56,13 +50,62 @@ export default function NewLoanApplication() {
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [showPropertySelection, setShowPropertySelection] = useState(false);
   const [showBankSelection, setShowBankSelection] = useState(false);
+  const [selectedDeveloper, setSelectedDeveloper] = useState('dubai'); // 'dubai', 'esgaiher'
   
   // Data
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [selectedBankAgent, setSelectedBankAgent] = useState<BankAgent | null>(null);
-  const [bankAgents, setBankAgents] = useState<BankAgent[]>([]);
-  const [loadingBankAgents, setLoadingBankAgents] = useState(false);
+  const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
+  const [banks] = useState<Bank[]>([
+    { 
+      id: '1', 
+      name: 'Banque de Tunisie', 
+      logo: require('../../logos/Bank_of_Tunisia_logo.gif'), 
+      description: 'Leading commercial bank in Tunisia' 
+    },
+    { 
+      id: '2', 
+      name: 'Banque Internationale Arabe de Tunisie (BIAT)', 
+      logo: require('../../logos/biat.jpg'), 
+      description: 'Major private bank in Tunisia' 
+    },
+    { 
+      id: '3', 
+      name: 'Banque de l\'Habitat (BH)', 
+      logo: require('../../logos/bh.png'), 
+      description: 'Housing bank of Tunisia' 
+    },
+    { 
+      id: '4', 
+      name: 'Attijari Bank', 
+      logo: require('../../logos/attijari.png'), 
+      description: 'Moroccan bank in Tunisia' 
+    },
+    { 
+      id: '5', 
+      name: 'Banque Zitouna', 
+      logo: require('../../logos/zitouna.png'), 
+      description: 'Islamic bank in Tunisia' 
+    },
+    { 
+      id: '6', 
+      name: 'Banque Nationale Agricole (BNA)', 
+      logo: require('../../logos/bna.png'), 
+      description: 'National agricultural bank' 
+    },
+    { 
+      id: '7', 
+      name: 'Qatar National Bank (QNB)', 
+      logo: require('../../logos/qnb.png'), 
+      description: 'Qatari bank in Tunisia' 
+    },
+    { 
+      id: '8', 
+      name: 'Arab Tunisian Bank (ATB)', 
+      logo: require('../../logos/atb.png'), 
+      description: 'Arab Tunisian banking group' 
+    }
+  ]);
   
   // Form data - standardized object
   const [formData, setFormData] = useState({
@@ -76,35 +119,6 @@ export default function NewLoanApplication() {
     monthlyInsuranceAmount: ''
   });
 
-  const fetchApprovedBankAgents = async () => {
-    try {
-      setLoadingBankAgents(true);
-      console.log('Fetching approved bank agents...');
-      const response = await fetch(`${API_BASE_URL}/bank-agent-registration?fetch_all_approved=true`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log('Bank agents API response:', result);
-
-      if (result.success) {
-        // Try different possible response structures
-        const agents = result.registrations || result.data || result.bankAgents || [];
-        console.log('Found bank agents:', agents.length);
-        setBankAgents(agents);
-      } else {
-        console.log('API returned error:', result.error);
-        setBankAgents([]);
-      }
-    } catch (error) {
-      console.error('Error fetching bank agents:', error);
-      setBankAgents([]);
-    } finally {
-      setLoadingBankAgents(false);
-    }
-  };
 
   const steps = [
     { id: 1, title: 'Select Property', description: 'Choose from existing properties' },
@@ -114,16 +128,15 @@ export default function NewLoanApplication() {
     { id: 5, title: 'Review & Submit', description: 'Review and submit application' }
   ];
 
-  // Fetch properties and bank agents on component mount
+  // Fetch properties on component mount and when developer changes
   useEffect(() => {
-    fetchProperties();
-    fetchApprovedBankAgents();
-  }, []);
+    fetchProperties(selectedDeveloper);
+  }, [selectedDeveloper]);
 
-  const fetchProperties = async () => {
+  const fetchProperties = async (developer: string = 'all') => {
     setLoadingProperties(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/properties`);
+      const response = await fetch(`${API_BASE_URL}/properties?developer=${developer}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -151,8 +164,8 @@ export default function NewLoanApplication() {
     setShowPropertySelection(false);
   };
 
-  const handleBankAgentSelect = (bankAgent: BankAgent) => {
-    setSelectedBankAgent(bankAgent);
+  const handleBankSelect = (bank: Bank) => {
+    setSelectedBank(bank);
     setShowBankSelection(false);
   };
 
@@ -194,7 +207,7 @@ export default function NewLoanApplication() {
       case 2:
         return formData.employmentStatus !== '' && formData.annualIncome !== '' && formData.identityCard !== null && formData.proofOfIncome !== null;
       case 3:
-        return selectedBankAgent !== null;
+        return selectedBank !== null;
       case 4:
         if (formData.includeInsurance) {
           return formData.monthlyInsuranceAmount !== '' && parseFloat(formData.monthlyInsuranceAmount) > 0;
@@ -270,7 +283,7 @@ export default function NewLoanApplication() {
       submitFormData.append('monthly_payment', monthlyPayment.toFixed(2));
       submitFormData.append('employment_status', formData.employmentStatus);
       submitFormData.append('annual_income', formData.annualIncome);
-      submitFormData.append('bank_agent_id', selectedBankAgent?.id || '');
+      submitFormData.append('bank_agent_id', 'default-bank-agent-id'); // All applications go to same bank agent
       submitFormData.append('include_insurance', formData.includeInsurance.toString());
       if (formData.includeInsurance && formData.monthlyInsuranceAmount) {
         submitFormData.append('monthly_insurance_amount', formData.monthlyInsuranceAmount);
@@ -335,7 +348,42 @@ console.log(submitFormData);
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepContentTitle}>Select Property</Text>
-            <Text style={styles.stepContentSubtitle}>Choose from existing properties</Text>
+            <Text style={styles.stepContentSubtitle}>Choose from developer properties</Text>
+            
+            {/* Developer Selection */}
+            <View style={styles.developerSelection}>
+              <Text style={styles.developerLabel}>Select Developer</Text>
+              <View style={styles.developerButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.developerButton,
+                    selectedDeveloper === 'dubai' && styles.developerButtonActive
+                  ]}
+                  onPress={() => setSelectedDeveloper('dubai')}
+                >
+                  <Text style={[
+                    styles.developerButtonText,
+                    selectedDeveloper === 'dubai' && styles.developerButtonTextActive
+                  ]}>
+                    🇦🇪 Dubai Properties
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.developerButton,
+                    selectedDeveloper === 'esgaiher' && styles.developerButtonActive
+                  ]}
+                  onPress={() => setSelectedDeveloper('esgaiher')}
+                >
+                  <Text style={[
+                    styles.developerButtonText,
+                    selectedDeveloper === 'esgaiher' && styles.developerButtonTextActive
+                  ]}>
+                    🇹🇳 Esgaiher Tunisia
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
             
             <TouchableOpacity 
               style={styles.propertySelector}
@@ -483,41 +531,38 @@ console.log(submitFormData);
       case 3:
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepContentTitle}>Choose Your Bank Agent</Text>
-            <Text style={styles.stepContentSubtitle}>Select an approved bank agent to handle your loan</Text>
+            <Text style={styles.stepContentTitle}>Choose Your Bank</Text>
+            <Text style={styles.stepContentSubtitle}>Select your preferred Tunisian bank</Text>
             
             <TouchableOpacity 
               style={styles.bankSelector}
               onPress={() => setShowBankSelection(true)}
             >
-              <Text style={styles.bankSelectorLabel}>Select Bank Agent *</Text>
+              <Text style={styles.bankSelectorLabel}>Select Bank *</Text>
               <View style={styles.bankSelectorContent}>
-                {selectedBankAgent ? (
+                {selectedBank ? (
                   <View style={styles.selectedBank}>
-                    <Text style={styles.bankLogo}>🏦</Text>
+                    <Image source={selectedBank.logo} style={styles.bankLogoImageSmall} />
                     <View>
-                      <Text style={styles.bankName}>{selectedBankAgent.bank_name}</Text>
-                      <Text style={styles.bankRate}>{selectedBankAgent.first_name} {selectedBankAgent.last_name} • {selectedBankAgent.position}</Text>
+                      <Text style={styles.bankName}>{selectedBank.name}</Text>
+                      <Text style={styles.bankRate}>{selectedBank.description}</Text>
                     </View>
                   </View>
                 ) : (
-                  <Text style={styles.bankSelectorPlaceholder}>Choose a bank agent...</Text>
+                  <Text style={styles.bankSelectorPlaceholder}>Choose a bank...</Text>
                 )}
                 <Text style={styles.bankSelectorArrow}>›</Text>
               </View>
             </TouchableOpacity>
 
-            {selectedBankAgent && (
+            {selectedBank && (
               <View style={styles.selectedBankCard}>
-                <Text style={styles.selectedBankTitle}>Selected Bank Agent</Text>
+                <Text style={styles.selectedBankTitle}>Selected Bank</Text>
                 <View style={styles.selectedBankInfo}>
-                  <Text style={styles.bankLogo}>🏦</Text>
+                  <Image source={selectedBank.logo} style={styles.bankLogoImage} />
                   <View style={styles.selectedBankDetails}>
-                    <Text style={styles.bankName}>{selectedBankAgent.bank_name}</Text>
-                    <Text style={styles.bankRate}>Agent: {selectedBankAgent.first_name} {selectedBankAgent.last_name}</Text>
-                    <Text style={styles.bankRate}>Position: {selectedBankAgent.position}</Text>
-                    <Text style={styles.bankRate}>Department: {selectedBankAgent.department}</Text>
-                    <Text style={styles.bankRating}>Employee ID: {selectedBankAgent.employee_id}</Text>
+                    <Text style={styles.bankName}>{selectedBank.name}</Text>
+                    <Text style={styles.bankRate}>{selectedBank.description}</Text>
                   </View>
                 </View>
               </View>
@@ -627,22 +672,14 @@ console.log(submitFormData);
             </View>
 
             <View style={styles.reviewCard}>
-              <Text style={styles.reviewSectionTitle}>Selected Bank Agent</Text>
+              <Text style={styles.reviewSectionTitle}>Selected Bank</Text>
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Bank:</Text>
-                <Text style={styles.reviewValue}>{selectedBankAgent?.bank_name}</Text>
+                <Text style={styles.reviewValue}>{selectedBank?.name}</Text>
               </View>
               <View style={styles.reviewRow}>
-                <Text style={styles.reviewLabel}>Agent:</Text>
-                <Text style={styles.reviewValue}>{selectedBankAgent?.first_name} {selectedBankAgent?.last_name}</Text>
-              </View>
-              <View style={styles.reviewRow}>
-                <Text style={styles.reviewLabel}>Position:</Text>
-                <Text style={styles.reviewValue}>{selectedBankAgent?.position}</Text>
-              </View>
-              <View style={styles.reviewRow}>
-                <Text style={styles.reviewLabel}>Department:</Text>
-                <Text style={styles.reviewValue}>{selectedBankAgent?.department}</Text>
+                <Text style={styles.reviewLabel}>Description:</Text>
+                <Text style={styles.reviewValue}>{selectedBank?.description}</Text>
               </View>
             </View>
 
@@ -770,7 +807,7 @@ console.log(submitFormData);
                 <Text style={styles.emptySubtitle}>No properties found. Please try again later.</Text>
                 <TouchableOpacity 
                   style={styles.retryButton}
-                  onPress={fetchProperties}
+                  onPress={() => fetchProperties(selectedDeveloper)}
                 >
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
@@ -824,46 +861,35 @@ console.log(submitFormData);
         <View style={styles.bankSelectionOverlay}>
           <View style={styles.bankSelectionCard}>
             <View style={styles.bankSelectionHeader}>
-              <Text style={styles.bankSelectionTitle}>Select a Bank Agent</Text>
+              <Text style={styles.bankSelectionTitle}>Select a Bank</Text>
               <TouchableOpacity onPress={() => setShowBankSelection(false)}>
                 <Text style={styles.closeButton}>✕</Text>
               </TouchableOpacity>
             </View>
             
-            {loadingBankAgents ? (
-              <View style={styles.loadingContainerBank}>
-                <Text style={styles.loadingTextBank}>Loading approved bank agents...</Text>
-              </View>
-            ) : bankAgents.length === 0 ? (
-              <View style={styles.noDataContainer}>
-                <Text style={styles.noDataText}>No approved bank agents available</Text>
-              </View>
-            ) : (
-              bankAgents.map((bankAgent) => (
+            <ScrollView style={styles.bankListContainer} showsVerticalScrollIndicator={false}>
+              {banks.map((bank) => (
                 <TouchableOpacity
-                  key={bankAgent.id}
+                  key={bank.id}
                   style={styles.bankOption}
-                  onPress={() => handleBankAgentSelect(bankAgent)}
+                  onPress={() => handleBankSelect(bank)}
                 >
-                  <Text style={styles.bankOptionLogo}>🏦</Text>
+                  <Image source={bank.logo} style={styles.bankOptionLogo} />
                   <View style={styles.bankOptionInfo}>
                     <View style={styles.bankOptionHeader}>
-                      <Text style={styles.bankOptionName}>{bankAgent.bank_name}</Text>
+                      <Text style={styles.bankOptionName}>{bank.name}</Text>
                       <View style={[styles.verificationBadge, { backgroundColor: '#dcfce7' }]}>
                         <Text style={styles.verificationIcon}>✅</Text>
                         <Text style={[styles.verificationText, { color: '#16a34a' }]}>
-                          Approved
+                          Available
                         </Text>
                       </View>
                     </View>
-                    <Text style={styles.bankOptionDetails}>
-                      {bankAgent.first_name} {bankAgent.last_name} • {bankAgent.position}
-                    </Text>
-                    <Text style={styles.bankOptionRating}>Department: {bankAgent.department}</Text>
+                    <Text style={styles.bankOptionDetails}>{bank.description}</Text>
                   </View>
                 </TouchableOpacity>
-              ))
-            )}
+              ))}
+            </ScrollView>
           </View>
         </View>
       )}
@@ -1368,6 +1394,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginRight: 12,
   },
+  bankLogoImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#f8fafc',
+  },
+  bankLogoImageSmall: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    marginRight: 12,
+    backgroundColor: '#f8fafc',
+  },
   bankName: {
     fontSize: 16,
     fontWeight: '600',
@@ -1429,8 +1469,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     margin: 20,
-    maxHeight: '80%',
-    width: '90%',
+    maxHeight: '85%',
+    width: '95%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   bankSelectionHeader: {
     flexDirection: 'row',
@@ -1452,10 +1500,24 @@ const styles = StyleSheet.create({
     borderColor: '#64748b',
     marginBottom: 12,
     backgroundColor: '#475569',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   bankOptionLogo: {
-    fontSize: 32,
+    width: 50,
+    height: 50,
+    borderRadius: 8,
     marginRight: 16,
+    backgroundColor: '#f8fafc',
+  },
+  bankListContainer: {
+    maxHeight: 400,
   },
   bankOptionInfo: {
     flex: 1,
@@ -1584,5 +1646,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#94a3b8',
     textAlign: 'center',
+  },
+  // Developer Selection Styles
+  developerSelection: {
+    marginBottom: 24,
+  },
+  developerLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e2e8f0',
+    marginBottom: 12,
+  },
+  developerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  developerButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#64748b',
+    backgroundColor: '#475569',
+    alignItems: 'center',
+  },
+  developerButtonActive: {
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0ea5e9',
+  },
+  developerButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  developerButtonTextActive: {
+    color: 'white',
   },
 });

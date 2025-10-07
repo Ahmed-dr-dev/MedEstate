@@ -16,31 +16,6 @@ import { useAuth } from '../../../contexts/AuthContext';
 import BottomNavigation from '../../../components/BankAgent/BottomNavigation';
 import { API_BASE_URL } from '../../../constants/api';
 
-interface BankAgentProfile {
-  id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth: string;
-  national_id: string;
-  phone: string;
-  address: string;
-  city: string;
-  postal_code?: string;
-  bank_name: string;
-  position: string;
-  employee_id: string;
-  department: string;
-  work_address?: string;
-  supervisor_name?: string;
-  supervisor_phone: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submitted_at: string;
-  reviewed_by?: string;
-  reviewed_at?: string;
-  admin_notes?: string;
-  rejection_reason?: string;
-}
 
 export default function BankAgentProfile() {
   const { user, signOut } = useAuth();
@@ -52,12 +27,9 @@ export default function BankAgentProfile() {
   const floatAnim2 = useRef(new Animated.Value(0)).current;
   const floatAnim3 = useRef(new Animated.Value(0)).current;
   
-  const [profile, setProfile] = useState<BankAgentProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchProfileData();
-    
     // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -96,33 +68,7 @@ export default function BankAgentProfile() {
     setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
   }, []);
 
-  const fetchProfileData = async () => {
-    try {
-      if (!user?.id) {
-        setIsLoading(false);
-        return;
-      }
 
-      const response = await fetch(`${API_BASE_URL}/bank-agent-registration?user_id=${user.id}`);
-      const result = await response.json();
-
-      if (result.success && result.registrations && result.registrations.length > 0) {
-        const latestRegistration = result.registrations[0];
-        setProfile(latestRegistration);
-      }
-    } catch (error) {
-      console.error('Error fetching profile data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleInputChange = (field: keyof BankAgentProfile, value: string) => {
-    setProfile(prev => prev ? ({
-      ...prev,
-      [field]: value
-    }) : null);
-  };
 
 
   const handleLogout = () => {
@@ -136,25 +82,7 @@ export default function BankAgentProfile() {
     );
   };
 
-  const getVerificationStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return '#10b981';
-      case 'pending': return '#f59e0b';
-      case 'rejected': return '#ef4444';
-      default: return '#64748b';
-    }
-  };
-
-  const getVerificationStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved': return '✅';
-      case 'pending': return '⏳';
-      case 'rejected': return '❌';
-      default: return '📋';
-    }
-  };
-
-  const renderProfileField = (label: string, value: string, field: keyof BankAgentProfile, editable: boolean = true) => (
+  const renderProfileField = (label: string, value: string) => (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <Text style={styles.fieldValue}>{value}</Text>
@@ -172,25 +100,6 @@ export default function BankAgentProfile() {
     );
   }
 
-  if (!profile) {
-    return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-        <View style={styles.noDataContainer}>
-          <Text style={styles.noDataIcon}>📝</Text>
-          <Text style={styles.noDataTitle}>No Registration Found</Text>
-          <Text style={styles.noDataText}>You haven't completed your bank agent registration yet.</Text>
-          <TouchableOpacity 
-            style={styles.registerButton}
-            onPress={() => router.push('/Screens/BankAgent/Registration')}
-          >
-            <Text style={styles.registerButtonText}>Complete Registration</Text>
-          </TouchableOpacity>
-        </View>
-        <BottomNavigation />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -256,66 +165,22 @@ export default function BankAgentProfile() {
           </View>
         </Animated.View>
 
-        {/* Verification Status */}
-        {profile && (
-          <Animated.View 
-            style={[
-              styles.verificationCard,
-              {
-                transform: [{ translateY: slideAnim }],
-              }
-            ]}
-          >
-            <View style={styles.verificationHeader}>
-              <Text style={styles.verificationTitle}>Registration Status</Text>
-              <View style={[
-                styles.verificationBadge, 
-                { backgroundColor: getVerificationStatusColor(profile.status) + '20' }
-              ]}>
-                <Text style={styles.verificationIcon}>
-                  {getVerificationStatusIcon(profile.status)}
-                </Text>
-                <Text style={[
-                  styles.verificationText, 
-                  { color: getVerificationStatusColor(profile.status) }
-                ]}>
-                  {profile.status.toUpperCase()}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.verificationDescription}>
-              {profile.status === 'approved' 
-                ? 'Your bank agent account has been verified by our admin team. You can now process loan applications.'
-                : profile.status === 'pending'
-                ? 'Your verification is under review. You will be notified once approved.'
-                : 'Your verification was rejected. Please contact support for more information.'
-              }
-            </Text>
-          </Animated.View>
-        )}
-
         {/* Profile Information */}
-        {profile && (
-          <Animated.View 
-            style={[
-              styles.profileCard,
-              {
-                transform: [{ translateY: slideAnim }],
-              }
-            ]}
-          >
-            <Text style={styles.sectionTitle}>Essential Information</Text>
-            {renderProfileField('Full Name', `${profile.first_name} ${profile.last_name}`, 'first_name')}
-            {renderProfileField('Email', user?.email || 'N/A', 'first_name')}
-            {renderProfileField('Phone', profile.phone, 'phone')}
-            {renderProfileField('Bank Name', profile.bank_name, 'bank_name')}
-            {renderProfileField('Position', profile.position, 'position')}
-            {renderProfileField('Employee ID', profile.employee_id, 'employee_id')}
-            {renderProfileField('Department', profile.department, 'department')}
-            {renderProfileField('Registration Status', profile.status.toUpperCase(), 'status')}
-            {renderProfileField('Registered Since', new Date(profile.submitted_at).toLocaleDateString(), 'submitted_at')}
-          </Animated.View>
-        )}
+        <Animated.View 
+          style={[
+            styles.profileCard,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <Text style={styles.sectionTitle}>Bank Agent Profile</Text>
+          {renderProfileField('Full Name', user?.display_name || 'Bank Agent')}
+          {renderProfileField('Email', user?.email || 'N/A')}
+          {renderProfileField('User ID', user?.id || 'N/A')}
+          {renderProfileField('Account Type', 'Bank Agent')}
+          {renderProfileField('Status', 'Active')}
+        </Animated.View>
 
 
         <Animated.View

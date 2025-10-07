@@ -36,20 +36,6 @@ interface BankAgentStats {
   rejectedApplications: number;
 }
 
-interface BankAgentRegistration {
-  id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submitted_at: string;
-  bank_name: string;
-  position: string;
-  reviewed_by?: string | null;
-  reviewed_at?: string | null;
-  admin_notes?: string | null;
-  rejection_reason?: string | null;
-}
 
 export default function BankAgentDashboard() {
   const { user } = useAuth();
@@ -61,10 +47,7 @@ export default function BankAgentDashboard() {
   const floatAnim2 = useRef(new Animated.Value(0)).current;
   const floatAnim3 = useRef(new Animated.Value(0)).current;
   
-  // Registration status from backend
-  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | 'not_registered'>('not_registered');
-  const [registration, setRegistration] = useState<BankAgentRegistration | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<BankAgentStats>({
     totalApplications: 0,
     pendingApplications: 0,
@@ -73,7 +56,7 @@ export default function BankAgentDashboard() {
   });
 
   useEffect(() => {
-    fetchRegistrationStatus();
+    fetchLoanApplications();
     
     // Entrance animations
     Animated.parallel([
@@ -112,43 +95,14 @@ export default function BankAgentDashboard() {
     setTimeout(() => createFloatingAnimation(floatAnim3).start(), 2000);
   }, []);
 
-  const fetchRegistrationStatus = async () => {
-    try {
-      if (!user?.id) {
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/bank-agent-registration?user_id=${user.id}`);
-      const result = await response.json();
-
-      if (result.success && result.registrations && result.registrations.length > 0) {
-        const latestRegistration = result.registrations[0];
-        setRegistration(latestRegistration);
-        setApprovalStatus(latestRegistration.status);
-        
-        // If approved, fetch loan applications
-        if (latestRegistration.status === 'approved') {
-          await fetchLoanApplications();
-        }
-      } else {
-        setApprovalStatus('not_registered');
-      }
-    } catch (error) {
-      console.error('Error fetching registration status:', error);
-      setApprovalStatus('not_registered');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchLoanApplications = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/loan-applications?bank_agent_id=${user?.id}`);
+      const response = await fetch(`${API_BASE_URL}/loan-applications`);
       const result = await response.json();
 
       if (result.success && result.applications) {
-        // Update stats based on real loan applications
+        // Update stats based on all loan applications
         const newStats = {
           totalApplications: result.applications.length,
           pendingApplications: result.applications.filter((app: any) => app.status === 'pending').length,
@@ -394,106 +348,23 @@ export default function BankAgentDashboard() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Stats Overview - Only show if approved */}
-        {approvalStatus === 'approved' && (
-          <Animated.View 
-            style={[
-              styles.statsSection,
-              {
-                transform: [{ translateY: slideAnim }],
-              }
-            ]}
-          >
-            <Text style={styles.sectionTitle}>Application Overview</Text>
-            <View style={styles.statsGrid}>
-              {renderStatCard('Total Applications', stats.totalApplications, '📋', '#3b82f6', 'All loan requests')}
-              {renderStatCard('Pending Review', stats.pendingApplications, '⏳', '#f59e0b', 'Awaiting review')}
-              {renderStatCard('Approved', stats.approvedApplications, '✅', '#10b981', 'Successfully approved')}
-              {renderStatCard('Rejected', stats.rejectedApplications, '❌', '#ef4444', 'Declined applications')}
-            </View>
-          </Animated.View>
-        )}
-
-        {/* Registration Status Info */}
-        {approvalStatus !== 'approved' && (
-          <Animated.View 
-            style={[
-              styles.statsSection,
-              {
-                transform: [{ translateY: slideAnim }],
-              }
-            ]}
-          >
-            <Text style={styles.sectionTitle}>Registration Status</Text>
-            <View style={styles.statusCard}>
-              {approvalStatus === 'pending' && (
-                <>
-                  <Text style={styles.statusCardIcon}>⏳</Text>
-                  <Text style={styles.statusTitle}>Registration Under Review</Text>
-                  <Text style={styles.statusDescription}>
-                    Your bank agent registration is being reviewed. You'll be notified once approved.
-                  </Text>
-                  {registration && (
-                    <Text style={styles.statusDetails}>
-                      Bank: {registration.bank_name} • Position: {registration.position}
-                    </Text>
-                  )}
-                </>
-              )}
-              {approvalStatus === 'rejected' && (
-                <>
-                  <Text style={styles.statusCardIcon}>❌</Text>
-                  <Text style={styles.statusTitle}>Registration Rejected</Text>
-                  <Text style={styles.statusDescription}>
-                    Your bank agent registration was not approved.
-                  </Text>
-                  {registration && (
-                    <View style={styles.rejectionDetails}>
-                      {registration.rejection_reason && (
-                        <View style={styles.rejectionItem}>
-                          <Text style={styles.rejectionLabel}>Rejection Reason:</Text>
-                          <Text style={styles.rejectionValue}>{registration.rejection_reason}</Text>
-                        </View>
-                      )}
-                      {registration.admin_notes && (
-                        <View style={styles.rejectionItem}>
-                          <Text style={styles.rejectionLabel}>Admin Notes:</Text>
-                          <Text style={styles.rejectionValue}>{registration.admin_notes}</Text>
-                        </View>
-                      )}
-                      {registration.reviewed_at && (
-                        <View style={styles.rejectionItem}>
-                          <Text style={styles.rejectionLabel}>Reviewed On:</Text>
-                          <Text style={styles.rejectionValue}>
-                            {new Date(registration.reviewed_at).toLocaleDateString()}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-                  <Text style={styles.contactSupport}>
-                    Please contact support for more information or to resubmit your application.
-                  </Text>
-                </>
-              )}
-              {approvalStatus === 'not_registered' && (
-                <>
-                  <Text style={styles.statusCardIcon}>📝</Text>
-                  <Text style={styles.statusTitle}>Registration Required</Text>
-                  <Text style={styles.statusDescription}>
-                    You need to complete your bank agent registration to access the dashboard.
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.registerButton}
-                    onPress={() => router.push('/Screens/BankAgent/Registration')}
-                  >
-                    <Text style={styles.registerButtonText}>Complete Registration</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </Animated.View>
-        )}
+        {/* Stats Overview */}
+        <Animated.View 
+          style={[
+            styles.statsSection,
+            {
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <Text style={styles.sectionTitle}>Application Overview</Text>
+          <View style={styles.statsGrid}>
+            {renderStatCard('Total Applications', stats.totalApplications, '📋', '#3b82f6', 'All loan requests')}
+            {renderStatCard('Pending Review', stats.pendingApplications, '⏳', '#f59e0b', 'Awaiting review')}
+            {renderStatCard('Approved', stats.approvedApplications, '✅', '#10b981', 'Successfully approved')}
+            {renderStatCard('Rejected', stats.rejectedApplications, '❌', '#ef4444', 'Declined applications')}
+          </View>
+        </Animated.View>
 
       </Animated.ScrollView>
 
