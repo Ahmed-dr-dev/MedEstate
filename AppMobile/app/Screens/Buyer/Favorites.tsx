@@ -13,38 +13,196 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BuyerBottomNavigation from '../../../components/Buyer/BottomNavigation';
-import { API_BASE_URL } from '@/constants/api';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface SavedProperty {
+interface Property {
   id: string;
-  buyer_id: string;
-  property_id: string;
-  created_at: string;
-  property: {
-    id: string;
-    title: string;
-    location: string;
-    price: number;
-    bedrooms: number;
-    bathrooms: number;
-    area: number;
-    property_type: string;
-    description: string;
-    images: string[];
-    owner: {
-      display_name: string;
-      phone: string;
-    };
-    created_at: string;
-    updated_at: string;
+  title: string;
+  location: string;
+  price: number;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  property_type: string;
+  description: string;
+  images: string[];
+  owner: {
+    display_name: string;
+    phone: string;
   };
+  created_at: string;
+  updated_at: string;
 }
+
+// Mock data for Dubai developer houses (Acube promotion)
+const dubaiDeveloperHouses: Property[] = [
+  {
+    id: 'dubai-1',
+    title: 'Luxury Villa in Palm Jumeirah',
+    description: 'Stunning waterfront villa with private beach access and panoramic views of the Arabian Gulf.',
+    price: 8500000,
+    location: 'Palm Jumeirah, Dubai, UAE',
+    bedrooms: 6,
+    bathrooms: 7,
+    area: 8500,
+    property_type: 'Villa',
+    images: [
+      '../../../images/anga/acube1.jpg',
+      '../../../images/anga/acube 2.jpg',
+      '../../../images/anga/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'dubai-2',
+    title: 'Modern Apartment in Downtown Dubai',
+    description: 'Contemporary apartment in the heart of Dubai with Burj Khalifa views and premium amenities.',
+    price: 3200000,
+    location: 'Downtown Dubai, UAE',
+    bedrooms: 3,
+    bathrooms: 3,
+    area: 2200,
+    property_type: 'Apartment',
+    images: [
+      '../../../images/anga/acube1.jpg',
+      '../../../images/anga/acube 2.jpg',
+      '../../../images/anga/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'dubai-3',
+    title: 'Penthouse in Marina Walk',
+    description: 'Exclusive penthouse with private terrace overlooking Dubai Marina and the Arabian Gulf.',
+    price: 12000000,
+    location: 'Dubai Marina, UAE',
+    bedrooms: 4,
+    bathrooms: 5,
+    area: 4500,
+    property_type: 'Penthouse',
+    images: [
+      '../../../images/anga/acube1.jpg',
+      '../../../images/anga/acube 2.jpg',
+      '../../../images/anga/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+];
+
+// Mock data for Anga Esghaier developer houses (Esghaier Immobilière promotion)
+const esgaiherTunisiaHouses: Property[] = [
+  {
+    id: 'esgaiher-1',
+    title: 'Villa Moderne à Sidi Bou Saïd',
+    description: 'Villa contemporaine avec vue sur la mer Méditerranée et architecture traditionnelle tunisienne.',
+    price: 450000,
+    location: 'Sidi Bou Saïd, Tunis, Tunisie',
+    bedrooms: 4,
+    bathrooms: 3,
+    area: 280,
+    property_type: 'Villa',
+    images: [
+      '../../../images/anga/Anga.jpg',
+      '../../../images/anga/anga2.jpg',
+      '../../../images/anga/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-2',
+    title: 'Appartement de Luxe à Carthage',
+    description: 'Appartement haut de gamme dans le quartier historique de Carthage avec vue sur les ruines antiques.',
+    price: 320000,
+    location: 'Carthage, Tunis, Tunisie',
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 180,
+    property_type: 'Apartment',
+    images: [
+      '../../../images/anga/Anga.jpg',
+      '../../../images/anga/anga2.jpg',
+      '../../../images/anga/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-3',
+    title: 'Villa Familiale à La Marsa',
+    description: 'Villa spacieuse pour famille avec jardin privé et piscine, proche des plages de La Marsa.',
+    price: 680000,
+    location: 'La Marsa, Tunis, Tunisie',
+    bedrooms: 5,
+    bathrooms: 4,
+    area: 350,
+    property_type: 'Villa',
+    images: [
+      '../../../images/anga/Anga.jpg',
+      '../../../images/anga/anga2.jpg',
+      '../../../images/anga/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-4',
+    title: 'Studio Moderne à Tunis Centre',
+    description: 'Studio moderne et fonctionnel au cœur de Tunis, idéal pour investissement locatif.',
+    price: 85000,
+    location: 'Tunis Centre, Tunisie',
+    bedrooms: 1,
+    bathrooms: 1,
+    area: 45,
+    property_type: 'Studio',
+    images: [
+      '../../../images/anga/Anga.jpg',
+      '../../../images/anga/anga2.jpg',
+      '../../../images/anga/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+];
+
+const allProperties = [...dubaiDeveloperHouses, ...esgaiherTunisiaHouses];
 
 export default function Favorites() {
   const { user } = useAuth();
-  const [favorites, setFavorites] = useState<SavedProperty[]>([]);
+  const [favorites, setFavorites] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Animation values
@@ -55,10 +213,8 @@ export default function Favorites() {
   const floatAnim3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (user?.id) {
-      fetchFavorites();
-    }
-  }, [user?.id]);
+    fetchFavorites();
+  }, []);
 
   useEffect(() => {
     // Entrance animations
@@ -100,28 +256,26 @@ export default function Favorites() {
   }, []);
 
   const fetchFavorites = async () => {
-    if (!user?.id) return;
-    
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/properties/save?user_id=${user.id}`);
-      const result = await response.json();
+      const savedProperties = await AsyncStorage.getItem('savedProperties');
+      const likedPropertyIds = savedProperties ? JSON.parse(savedProperties) : [];
       
-      if (result.success) {
-        setFavorites(result.data);
-      } else {
-        console.error('Error fetching favorites:', result.error);
-      }
+      // Filter properties that are in the saved list
+      const favoriteProperties = allProperties.filter(property => 
+        likedPropertyIds.includes(property.id)
+      );
+      
+      setFavorites(favoriteProperties);
     } catch (error) {
       console.error('Error fetching favorites:', error);
+      setFavorites([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRemoveFavorite = async (propertyId: string) => {
-    if (!user?.id) return;
-    
     Alert.alert(
       'Remove from Favorites',
       'Are you sure you want to remove this property from your favorites?',
@@ -132,21 +286,16 @@ export default function Favorites() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_BASE_URL}/properties/save`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  user_id: user.id,
-                  property_id: propertyId
-                })
-              });
+              // Get current saved properties
+              const savedProperties = await AsyncStorage.getItem('savedProperties');
+              const likedPropertyIds = savedProperties ? JSON.parse(savedProperties) : [];
               
-              const result = await response.json();
-              if (result.success && !result.data.is_saved) {
-                setFavorites(favorites.filter(item => item.property_id !== propertyId));
-              }
+              // Remove the property from the list
+              const updatedProperties = likedPropertyIds.filter((id: string) => id !== propertyId);
+              await AsyncStorage.setItem('savedProperties', JSON.stringify(updatedProperties));
+              
+              // Update local state
+              setFavorites(favorites.filter(item => item.id !== propertyId));
             } catch (error) {
               console.error('Error removing favorite:', error);
               Alert.alert('Error', 'Failed to remove from favorites');
@@ -169,32 +318,32 @@ export default function Favorites() {
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
-  const renderFavorite = ({ item }: { item: SavedProperty }) => (
+  const renderFavorite = ({ item }: { item: Property }) => (
     <View style={styles.favoriteCard}>
       <TouchableOpacity
         style={styles.propertyContent}
-        onPress={() => router.push(`/Screens/Buyer/PropertyDetails?id=${item.property.id}`)}
+        onPress={() => router.push(`/Screens/Buyer/PropertyDetails?id=${item.id}`)}
         activeOpacity={0.9}
       >
         <Image 
           source={{ 
-            uri: item.property.images && item.property.images.length > 0 
-              ? item.property.images[0] 
+            uri: item.images && item.images.length > 0 
+              ? item.images[0] 
               : 'https://via.placeholder.com/100x100?text=No+Image'
           }} 
           style={styles.propertyImage} 
         />
         <View style={styles.propertyInfo}>
-          <Text style={styles.propertyTitle} numberOfLines={2}>{item.property.title}</Text>
-          <Text style={styles.propertyPrice}>{item.property.price.toLocaleString()} TND</Text>
+          <Text style={styles.propertyTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.propertyPrice}>{item.price.toLocaleString()} TND</Text>
           <View style={styles.locationContainer}>
             <Text style={styles.locationIcon}>📍</Text>
-            <Text style={styles.propertyLocation}>{item.property.location}</Text>
+            <Text style={styles.propertyLocation}>{item.location}</Text>
           </View>
           <View style={styles.propertyDetails}>
-            <Text style={styles.propertyDetail}>🛏️ {item.property.bedrooms}</Text>
-            <Text style={styles.propertyDetail}>🚿 {item.property.bathrooms}</Text>
-            <Text style={styles.propertyDetail}>📐 {item.property.area ? `${item.property.area} m²` : 'N/A'}</Text>
+            <Text style={styles.propertyDetail}>🛏️ {item.bedrooms}</Text>
+            <Text style={styles.propertyDetail}>🚿 {item.bathrooms}</Text>
+            <Text style={styles.propertyDetail}>📐 {item.area ? `${item.area} m²` : 'N/A'}</Text>
           </View>
           <Text style={styles.dateAdded}>Added {formatDate(item.created_at)}</Text>
         </View>
@@ -202,7 +351,7 @@ export default function Favorites() {
       
       <TouchableOpacity
         style={styles.removeButton}
-        onPress={() => handleRemoveFavorite(item.property.id)}
+        onPress={() => handleRemoveFavorite(item.id)}
       >
         <Text style={styles.removeButtonText}>×</Text>
       </TouchableOpacity>

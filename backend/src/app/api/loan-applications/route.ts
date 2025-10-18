@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from "../../../../lib/supabaseServer";
 
-// GET /api/loan-applications - Get all loan applications (single bank agent system)
+// GET /api/loan-applications - Get all loan applications
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const applicant_id = searchParams.get('applicant_id');
 
-    console.log('Fetching loan applications with applicant_id:', applicant_id);
-
     let query = supabase
       .from('loan_applications')
       .select(`
         *,
-        property:properties!loan_applications_property_id_fkey (
-          id,
-          title,
-          price,
-          location,
-          images
-        ),
         applicant:profiles!loan_applications_applicant_id_fkey (
           id,
           display_name,
@@ -28,36 +19,11 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: false });
 
-    // Filter by applicant_id if provided (for buyer's own applications)
     if (applicant_id) {
       query = query.eq('applicant_id', applicant_id);
-      console.log('Filtering by applicant_id:', applicant_id);
-    } else {
-      // No filtering - return all applications (for bank agent)
-      console.log('No filtering applied, returning all loan applications for bank agent');
     }
 
     const { data: loanApplications, error } = await query;
-
-    console.log('Loan applications query result:', { 
-      applicant_id, 
-      loanApplicationsCount: loanApplications?.length || 0,
-      error: error?.message 
-    });
-
-    // Debug: Check if there are any loan applications at all
-    if (!applicant_id && (!loanApplications || loanApplications.length === 0)) {
-      const { data: allApplications, error: allError } = await supabase
-        .from('loan_applications')
-        .select('id, applicant_id, status, created_at')
-        .limit(5);
-      
-      console.log('Debug - All loan applications in database:', {
-        totalCount: allApplications?.length || 0,
-        sampleApplications: allApplications,
-        allError: allError?.message
-      });
-    }
 
     if (error) {
       console.error('Error fetching loan applications:', error);
@@ -67,9 +33,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Transform the data to include parsed property information from submitted_documents
+    const transformedApplications = loanApplications?.map(app => {
+      let propertyInfo = null;
+      
+      // Extract property information from submitted_documents
+      if (app.submitted_documents && app.submitted_documents.length > 0) {
+        const propertyDoc = app.submitted_documents.find((doc: any) => 
+          typeof doc === 'string' && doc.startsWith('Property:')
+        );
+        
+        if (propertyDoc) {
+          // Parse "Property: Title - Location - Price"
+          const parts = propertyDoc.replace('Property: ', '').split(' - ');
+          if (parts.length >= 3) {
+            propertyInfo = {
+              title: parts[0],
+              location: parts[1],
+              price: parts[2]
+            };
+          }
+        }
+      }
+
+      return {
+        ...app,
+        property_info: propertyInfo
+      };
+    }) || [];
+
     return NextResponse.json({
       success: true,
-      applications: loanApplications || []
+      applications: transformedApplications
     });
 
   } catch (error) {
@@ -86,12 +81,16 @@ export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type');
     
-    // Handle form data (with documents)
     if (contentType && contentType.includes('multipart/form-data')) {
+      // Handle form data with file uploads
       const formData = await request.formData();
-      console.log(formData);
+      
+      // Extract form fields
       const applicant_id = formData.get('applicant_id') as string;
       const property_id = formData.get('property_id') as string;
+      const property_title = formData.get('property_title') as string;
+      const property_location = formData.get('property_location') as string;
+      const property_price = formData.get('property_price') as string;
       const loan_amount = formData.get('loan_amount') as string;
       const loan_term_years = formData.get('loan_term_years') as string;
       const interest_rate = formData.get('interest_rate') as string;
@@ -107,64 +106,86 @@ export async function POST(request: NextRequest) {
       // Validate required fields
       if (!applicant_id || !loan_amount || !loan_term_years || !employment_status || !annual_income) {
         return NextResponse.json(
-          { success: false, error: 'Missing required fields: applicant_id, loan_amount, loan_term_years, employment_status, annual_income' },
+          { success: false, error: 'Missing required fields' },
           { status: 400 }
         );
       }
 
-      // Verify applicant exists
-      const { data: applicant, error: applicantError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', applicant_id)
-        .single();
-
-      if (applicantError || !applicant) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid applicant ID' },
-          { status: 400 }
-        );
+      // Prepare submitted documents array (text array)
+      const submittedDocuments = [];
+      
+      // Add property information to documents
+      if (property_title || property_location || property_price) {
+        submittedDocuments.push(`Property: ${property_title || 'N/A'} - ${property_location || 'N/A'} - ${property_price || 'N/A'}`);
       }
 
-      // If property_id is provided and not empty, verify property exists
-      if (property_id && property_id.trim() !== '') {
-        const { data: property, error: propertyError } = await supabase
-          .from('properties')
-          .select('id')
-          .eq('id', property_id)
-          .single();
+      // Add employment information
+      if (employment_status) {
+        submittedDocuments.push(`Employment Status: ${employment_status}`);
+      }
 
-        if (propertyError || !property) {
-          return NextResponse.json(
-            { success: false, error: 'Invalid property ID' },
-            { status: 400 }
-          );
+      // Add insurance information if included
+      if (include_insurance && monthly_insurance_amount) {
+        submittedDocuments.push(`Insurance: ${monthly_insurance_amount} per month`);
+      }
+
+      // Upload identity card image if provided
+      let identityCardUrl = null;
+      if (identity_card && identity_card.size > 0) {
+        try {
+          const identityCardBuffer = await identity_card.arrayBuffer();
+          const identityCardExtension = identity_card.name.split('.').pop() || 'jpg';
+          const identityCardFileName = `identity_${Date.now()}.${identityCardExtension}`;
+
+          const { data: identityCardData, error: identityCardError } = await supabase.storage
+            .from('loan-application-documents')
+            .upload(identityCardFileName, identityCardBuffer, {
+              contentType: identity_card.type,
+              upsert: false
+            });
+
+          if (!identityCardError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('loan-application-documents')
+              .getPublicUrl(identityCardFileName);
+
+            identityCardUrl = publicUrl;
+            submittedDocuments.push(`Identity Card: ${identity_card.name} - ${publicUrl}`);
+          }
+        } catch (error) {
+          console.error('Error uploading identity card:', error);
         }
       }
 
-      // Get the default bank agent (first approved bank agent)
-      let bankAgentProfileId = null;
-      if (bank_agent_id && bank_agent_id.trim() !== '') {
-        // For the new logic, we'll use a default bank agent ID
-        // First, try to find any approved bank agent
-        const { data: bankAgentRegistration, error: bankAgentError } = await supabase
-          .from('bank_agent_registrations')
-          .select('user_id, status')
-          .eq('status', 'approved')
-          .limit(1)
-          .single();
+      // Upload proof of income image if provided
+      let proofOfIncomeUrl = null;
+      if (proof_of_income && proof_of_income.size > 0) {
+        try {
+          const proofOfIncomeBuffer = await proof_of_income.arrayBuffer();
+          const proofOfIncomeExtension = proof_of_income.name.split('.').pop() || 'jpg';
+          const proofOfIncomeFileName = `income_${Date.now()}.${proofOfIncomeExtension}`;
 
-        if (!bankAgentError && bankAgentRegistration) {
-          bankAgentProfileId = bankAgentRegistration.user_id;
-        } else {
-          // If no approved bank agent exists, create a default one or use a fallback
-          console.log('No approved bank agent found, using default logic');
-          // For now, we'll proceed without a bank agent assignment
-          // In a real scenario, you might want to create a default bank agent
+          const { data: proofOfIncomeData, error: proofOfIncomeError } = await supabase.storage
+            .from('loan-application-documents')
+            .upload(proofOfIncomeFileName, proofOfIncomeBuffer, {
+              contentType: proof_of_income.type,
+              upsert: false
+            });
+
+          if (!proofOfIncomeError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('loan-application-documents')
+              .getPublicUrl(proofOfIncomeFileName);
+
+            proofOfIncomeUrl = publicUrl;
+            submittedDocuments.push(`Proof of Income: ${proof_of_income.name} - ${publicUrl}`);
+          }
+        } catch (error) {
+          console.error('Error uploading proof of income:', error);
         }
       }
 
-      // Create loan application first
+      // Create loan application
       const { data: loanApplication, error: insertError } = await supabase
         .from('loan_applications')
         .insert({
@@ -176,17 +197,17 @@ export async function POST(request: NextRequest) {
           monthly_payment: monthly_payment ? parseFloat(monthly_payment) : null,
           employment_status,
           annual_income: parseFloat(annual_income),
-          identity_card_image: null, // Will be updated after upload
-          proof_of_income_image: null, // Will be updated after upload
-          bank_agent_id: bankAgentProfileId,
+          identity_card_image: identityCardUrl,
+          proof_of_income_image: proofOfIncomeUrl,
+          bank_agent_id: null, // Set to null since we don't have a valid UUID
           include_insurance: include_insurance || false,
           monthly_insurance_amount: monthly_insurance_amount ? parseFloat(monthly_insurance_amount) : null,
           status: 'pending',
-          submitted_documents: [],
+          submitted_documents: submittedDocuments,
           bank_agent_decision: null,
           bank_agent_notes: null
         })
-        .select('id')
+        .select('*')
         .single();
 
       if (insertError) {
@@ -197,108 +218,22 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Upload documents to Supabase Storage
-      const uploadedDocuments: string[] = [];
-      const documentUrls: { identity_card?: string; proof_of_income?: string } = {};
-
-      // Upload Identity Card if provided
-      if (identity_card && identity_card.size > 0) {
-        try {
-          const identityCardBuffer = await identity_card.arrayBuffer();
-          const identityCardExtension = identity_card.name.split('.').pop() || 'jpg';
-          const identityCardFileName = `${loanApplication.id}/identity_card_${Date.now()}.${identityCardExtension}`;
-
-          const { data: identityCardData, error: identityCardError } = await supabase.storage
-            .from('loan-application-documents')
-            .upload(identityCardFileName, identityCardBuffer, {
-              contentType: identity_card.type,
-              upsert: false
-            });
-
-          if (!identityCardError) {
-            const { data: { publicUrl: identityCardUrl } } = supabase.storage
-              .from('loan-application-documents')
-              .getPublicUrl(identityCardFileName);
-
-            documentUrls.identity_card = identityCardUrl;
-            uploadedDocuments.push(`Identity Card: ${identity_card.name}`);
-          }
-        } catch (error) {
-          console.error('Error processing identity card:', error);
-        }
-      }
-
-      // Upload Proof of Income if provided
-      if (proof_of_income && proof_of_income.size > 0) {
-        try {
-          const proofOfIncomeBuffer = await proof_of_income.arrayBuffer();
-          const proofOfIncomeExtension = proof_of_income.name.split('.').pop() || 'jpg';
-          const proofOfIncomeFileName = `${loanApplication.id}/proof_of_income_${Date.now()}.${proofOfIncomeExtension}`;
-
-          const { data: proofOfIncomeData, error: proofOfIncomeError } = await supabase.storage
-            .from('loan-application-documents')
-            .upload(proofOfIncomeFileName, proofOfIncomeBuffer, {
-              contentType: proof_of_income.type,
-              upsert: false
-            });
-
-          if (!proofOfIncomeError) {
-            const { data: { publicUrl: proofOfIncomeUrl } } = supabase.storage
-              .from('loan-application-documents')
-              .getPublicUrl(proofOfIncomeFileName);
-
-            documentUrls.proof_of_income = proofOfIncomeUrl;
-            uploadedDocuments.push(`Proof of Income: ${proof_of_income.name}`);
-          }
-        } catch (error) {
-          console.error('Error processing proof of income:', error);
-        }
-      }
-
-      // Update loan application with document URLs
-      const updateData: any = {
-        identity_card_image: documentUrls.identity_card || null,
-        proof_of_income_image: documentUrls.proof_of_income || null,
-        submitted_documents: uploadedDocuments
-      };
-
-      const { data: updatedApplication, error: updateError } = await supabase
-        .from('loan_applications')
-        .update(updateData)
-        .eq('id', loanApplication.id)
-        .select(`
-          *,
-          property:properties!loan_applications_property_id_fkey (
-            id,
-            title,
-            price,
-            location,
-            images
-          )
-        `)
-        .single();
-
-      if (updateError) {
-        console.error('Error updating loan application:', updateError);
-        return NextResponse.json(
-          { success: false, error: 'Failed to update loan application with document URLs' },
-          { status: 500 }
-        );
-      }
-
       return NextResponse.json({
         success: true,
-        data: updatedApplication,
-        message: `Loan application created successfully with ${uploadedDocuments.length} document(s)`
+        data: loanApplication,
+        message: 'Loan application created successfully'
       }, { status: 201 });
 
     } else {
-      // Handle JSON data (without documents)
+      // Handle JSON data (without file uploads)
       const body = await request.json();
 
       const {
         applicant_id,
         property_id,
+        property_title,
+        property_location,
+        property_price,
         loan_amount,
         loan_term_years,
         interest_rate,
@@ -307,7 +242,7 @@ export async function POST(request: NextRequest) {
         annual_income,
         identity_card_image,
         proof_of_income_image,
-        selected_bank_id,
+        bank_agent_id,
         include_insurance,
         monthly_insurance_amount,
         submitted_documents = []
@@ -316,44 +251,30 @@ export async function POST(request: NextRequest) {
       // Validate required fields
       if (!applicant_id || !loan_amount || !loan_term_years || !employment_status || !annual_income) {
         return NextResponse.json(
-          { success: false, error: 'Missing required fields: applicant_id, loan_amount, loan_term_years, employment_status, annual_income' },
+          { success: false, error: 'Missing required fields' },
           { status: 400 }
         );
       }
 
-      // Verify applicant exists
-      const { data: applicant, error: applicantError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', applicant_id)
-        .single();
-
-      if (applicantError || !applicant) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid applicant ID' },
-          { status: 400 }
-        );
-      }
-
-      // If property_id is provided and not empty, verify property exists
-      if (property_id && property_id.trim() !== '') {
-        const { data: property, error: propertyError } = await supabase
-          .from('properties')
-          .select('id')
-          .eq('id', property_id)
-          .single();
-
-        if (propertyError || !property) {
-          return NextResponse.json(
-            { success: false, error: 'Invalid property ID' },
-            { status: 400 }
-          );
-        }
-      }
-
+      // Prepare submitted documents array (text array)
+      const documents = [...submitted_documents];
       
+      // Add property information to documents
+      if (property_title || property_location || property_price) {
+        documents.push(`Property: ${property_title || 'N/A'} - ${property_location || 'N/A'} - ${property_price || 'N/A'}`);
+      }
 
-      // Create loan application with all fields
+      // Add employment information
+      if (employment_status) {
+        documents.push(`Employment Status: ${employment_status}`);
+      }
+
+      // Add insurance information if included
+      if (include_insurance && monthly_insurance_amount) {
+        documents.push(`Insurance: ${monthly_insurance_amount} per month`);
+      }
+
+      // Create loan application
       const { data: loanApplication, error: insertError } = await supabase
         .from('loan_applications')
         .insert({
@@ -367,25 +288,15 @@ export async function POST(request: NextRequest) {
           annual_income: parseFloat(annual_income),
           identity_card_image: identity_card_image || null,
           proof_of_income_image: proof_of_income_image || null,
-          selected_bank_id:  null,
+          bank_agent_id: null, // Set to null since we don't have a valid UUID
           include_insurance: include_insurance || false,
           monthly_insurance_amount: monthly_insurance_amount ? parseFloat(monthly_insurance_amount) : null,
           status: 'pending',
-          submitted_documents,
+          submitted_documents: documents,
           bank_agent_decision: null,
-          bank_agent_notes: null,
-          bank_agent_id: 'default-bank-agent-id' // Use the default bank agent instead of selected_bank_id
+          bank_agent_notes: null
         })
-        .select(`
-          *,
-          property:properties!loan_applications_property_id_fkey (
-            id,
-            title,
-            price,
-            location,
-            images
-          )
-        `)
+        .select('*')
         .single();
 
       if (insertError) {

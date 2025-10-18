@@ -127,7 +127,7 @@ export default function SignUpScreen() {
       if (data.success) {
         Alert.alert(
           'Success!',
-          'Account created successfully! Please check your email for verification if required.',
+          'Account created successfully!',
           [
             {
               text: 'OK',

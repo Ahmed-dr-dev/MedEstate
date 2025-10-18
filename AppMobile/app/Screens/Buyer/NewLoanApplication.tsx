@@ -414,6 +414,9 @@ export default function NewLoanApplication() {
       // Add all form fields
       submitFormData.append('applicant_id', user.id);
       submitFormData.append('property_id', selectedProperty?.id || '');
+      submitFormData.append('property_title', selectedProperty?.title || '');
+      submitFormData.append('property_location', selectedProperty?.location || '');
+      submitFormData.append('property_price', selectedProperty?.price?.toString() || '');
       submitFormData.append('loan_amount', loanAmountNum.toFixed(2));
       submitFormData.append('loan_term_years', formData.loanTerm);
       submitFormData.append('interest_rate', (interestRate / 100).toFixed(4));

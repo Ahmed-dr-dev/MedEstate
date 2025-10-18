@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../../contexts/AuthContext';
 import { API_BASE_URL } from '@/constants/api';
 
@@ -94,16 +95,16 @@ export default function BuyerDashboard() {
     
     setLoading(true);
     try {
-      // Fetch saved properties count
-      const favoritesResponse = await fetch(`${API_BASE_URL}/properties/save?user_id=${user.id}`);
-      const favoritesResult = await favoritesResponse.json();
+      // Fetch saved properties count from AsyncStorage (same key as favorites page)
+      const savedProperties = await AsyncStorage.getItem('savedProperties');
+      const likedPropertyIds = savedProperties ? JSON.parse(savedProperties) : [];
       
       // Fetch loan applications count
       const applicationsResponse = await fetch(`${API_BASE_URL}/loan-applications?applicant_id=${user.id}`);
       const applicationsResult = await applicationsResponse.json();
       
       setStats({
-        savedProperties: favoritesResult.success && favoritesResult.data ? favoritesResult.data.length : 0,
+        savedProperties: likedPropertyIds.length,
         loanApplications: applicationsResult.success && applicationsResult.applications ? applicationsResult.applications.length : 0,
         scheduledVisits: 0, // This can be implemented later if needed
       });

@@ -102,22 +102,7 @@ export default function Index() {
           <View style={styles.mainContent}>
             <View style={styles.heroSection}>
               <Text style={styles.heroTitle}>Find Your Perfect{'\n'}Real Estate</Text>
-              <Text style={styles.heroTitle}>{API_BASE_URL}</Text>
-               <TouchableOpacity 
-                 style={styles.testButton}
-                 onPress={() => {
-                   fetch(`${API_BASE_URL}/TestConnection`, {
-                     method: 'POST',
-                   }).then(response => {
-                     setTestConnection(true);
-                     console.log('Connection test successful');
-                   }).catch(error => {
-                     console.log('Connection test failed:', error);
-                   });
-                 }}
-               >
-                 <Text style={styles.testButtonText}>Test Backend Connection</Text>
-               </TouchableOpacity>
+             
               <Text style={styles.heroSubtitle}>
                 Discover premium real estate properties tailored for your needs
               </Text>
