@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
         area: 8500,
         property_type: 'Villa',
         images: [
-          'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800',
-          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800',
-          'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800'
+          'http://192.168.100.9:3000/images/anga/acube1.jpg',
+          'http://192.168.100.9:3000/images/anga/acube 2.jpg',
+          'http://192.168.100.9:3000/images/anga/acube 3.jpg'
         ],
         is_active: true,
         created_at: new Date().toISOString(),
@@ -44,9 +44,9 @@ export async function GET(request: NextRequest) {
         area: 2200,
         property_type: 'Apartment',
         images: [
-          'https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=800',
-          'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800',
-          'https://images.unsplash.com/photo-1600566753086-5f8712952358?w=800'
+          'http://192.168.100.9:3000/images/anga/acube1.jpg',
+          'http://192.168.100.9:3000/images/anga/acube 2.jpg',
+          'http://192.168.100.9:3000/images/anga/acube 3.jpg'
         ],
         is_active: true,
         created_at: new Date().toISOString(),
@@ -67,9 +67,9 @@ export async function GET(request: NextRequest) {
         area: 4500,
         property_type: 'Penthouse',
         images: [
-          'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=800',
-          'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=800',
-          'https://images.unsplash.com/photo-1600566753086-5f8712952358?w=800'
+          'http://192.168.100.9:3000/images/anga/acube1.jpg',
+          'http://192.168.100.9:3000/images/anga/acube 2.jpg',
+          'http://192.168.100.9:3000/images/anga/acube 3.jpg'
         ],
         is_active: true,
         created_at: new Date().toISOString(),
@@ -94,9 +94,9 @@ export async function GET(request: NextRequest) {
         area: 280,
         property_type: 'Villa',
         images: [
-          'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=800',
-          'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=800',
-          'https://images.unsplash.com/photo-1600566753086-5f8712952358?w=800'
+          'http://192.168.100.9:3000/images/anga/Anga.jpg',
+          'http://192.168.100.9:3000/images/anga/anga2.jpg',
+          'http://192.168.100.9:3000/images/anga/download.jpg'
         ],
         is_active: true,
         created_at: new Date().toISOString(),
@@ -117,9 +117,9 @@ export async function GET(request: NextRequest) {
         area: 180,
         property_type: 'Apartment',
         images: [
-          'https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=800',
-          'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800',
-          'https://images.unsplash.com/photo-1600566753086-5f8712952358?w=800'
+          'http://192.168.100.9:3000/images/anga/Anga.jpg',
+          'http://192.168.100.9:3000/images/anga/anga2.jpg',
+          'http://192.168.100.9:3000/images/anga/download.jpg'
         ],
         is_active: true,
         created_at: new Date().toISOString(),
@@ -140,9 +140,9 @@ export async function GET(request: NextRequest) {
         area: 350,
         property_type: 'Villa',
         images: [
-          'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=800',
-          'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=800',
-          'https://images.unsplash.com/photo-1600566753086-5f8712952358?w=800'
+          'http://192.168.100.9:3000/images/anga/Anga.jpg',
+          'http://192.168.100.9:3000/images/anga/anga2.jpg',
+          'http://192.168.100.9:3000/images/anga/download.jpg'
         ],
         is_active: true,
         created_at: new Date().toISOString(),
@@ -163,9 +163,9 @@ export async function GET(request: NextRequest) {
         area: 45,
         property_type: 'Studio',
         images: [
-          'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=800',
-          'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=800',
-          'https://images.unsplash.com/photo-1600566753086-5f8712952358?w=800'
+          'http://192.168.100.9:3000/images/anga/Anga.jpg',
+          'http://192.168.100.9:3000/images/anga/anga2.jpg',
+          'http://192.168.100.9:3000/images/anga/download.jpg'
         ],
         is_active: true,
         created_at: new Date().toISOString(),

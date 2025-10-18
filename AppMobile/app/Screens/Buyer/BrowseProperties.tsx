@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,10 @@ import {
   Animated,
 } from 'react-native';
 import { PropertyCard } from '../../../components';
-import { API_BASE_URL } from '@/constants/api';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+
+
 
 const { width } = Dimensions.get('window');
 
@@ -36,11 +37,172 @@ interface Property {
   updated_at: string;
 }
 
+// Mock data for Dubai developer houses (Acube promotion)
+const dubaiDeveloperHouses: Property[] = [
+  {
+    id: 'dubai-1',
+    title: 'Luxury Villa in Palm Jumeirah',
+    description: 'Stunning waterfront villa with private beach access and panoramic views of the Arabian Gulf.',
+    price: 8500000,
+    location: 'Palm Jumeirah, Dubai, UAE',
+    bedrooms: 6,
+    bathrooms: 7,
+    area: 8500,
+    property_type: 'Villa',
+    images: [
+      '../../logos/acube1.jpg',
+      '../../logos/acube 2.jpg',
+      '../../logos/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'dubai-2',
+    title: 'Modern Apartment in Downtown Dubai',
+    description: 'Contemporary apartment in the heart of Dubai with Burj Khalifa views and premium amenities.',
+    price: 3200000,
+    location: 'Downtown Dubai, UAE',
+    bedrooms: 3,
+    bathrooms: 3,
+    area: 2200,
+    property_type: 'Apartment',
+    images: [
+      '../../logos/acube1.jpg',
+      '../../logos/acube 2.jpg',
+      '../../logos/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'dubai-3',
+    title: 'Penthouse in Marina Walk',
+    description: 'Exclusive penthouse with private terrace overlooking Dubai Marina and the Arabian Gulf.',
+    price: 12000000,
+    location: 'Dubai Marina, UAE',
+    bedrooms: 4,
+    bathrooms: 5,
+    area: 4500,
+    property_type: 'Penthouse',
+    images: [
+      '../../logos/acube1.jpg',
+      '../../logos/acube 2.jpg',
+      '../../logos/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+];
+
+// Mock data for Anga Esghaier developer houses (Esghaier Immobilière promotion)
+const esgaiherTunisiaHouses: Property[] = [
+  {
+    id: 'esgaiher-1',
+    title: 'Villa Moderne à Sidi Bou Saïd',
+    description: 'Villa contemporaine avec vue sur la mer Méditerranée et architecture traditionnelle tunisienne.',
+    price: 450000,
+    location: 'Sidi Bou Saïd, Tunis, Tunisie',
+    bedrooms: 4,
+    bathrooms: 3,
+    area: 280,
+    property_type: 'Villa',
+    images: [
+      '../../logos/Anga.jpg',
+      '../../logos/anga2.jpg',
+      '../../logos/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-2',
+    title: 'Appartement de Luxe à Carthage',
+    description: 'Appartement haut de gamme dans le quartier historique de Carthage avec vue sur les ruines antiques.',
+    price: 320000,
+    location: 'Carthage, Tunis, Tunisie',
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 180,
+    property_type: 'Apartment',
+    images: [
+      '../../logos/Anga.jpg',
+      '../../logos/anga2.jpg',
+      '../../logos/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-3',
+    title: 'Villa Familiale à La Marsa',
+    description: 'Villa spacieuse pour famille avec jardin privé et piscine, proche des plages de La Marsa.',
+    price: 680000,
+    location: 'La Marsa, Tunis, Tunisie',
+    bedrooms: 5,
+    bathrooms: 4,
+    area: 350,
+    property_type: 'Villa',
+    images: [
+      '../../logos/Anga.jpg',
+      '../../logos/anga2.jpg',
+      '../../logos/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-4',
+    title: 'Studio Moderne à Tunis Centre',
+    description: 'Studio moderne et fonctionnel au cœur de Tunis, idéal pour investissement locatif.',
+    price: 85000,
+    location: 'Tunis Centre, Tunisie',
+    bedrooms: 1,
+    bathrooms: 1,
+    area: 45,
+    property_type: 'Studio',
+        images: [
+      '../../logos/Anga.jpg',
+      '../../logos/anga2.jpg',
+      '../../logos/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+];
+
 export default function BrowseProperties() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [loading, setLoading] = useState(false);
   const [selectedDeveloper, setSelectedDeveloper] = useState('dubai');
   
   // Animation values
@@ -88,29 +250,10 @@ export default function BrowseProperties() {
     setTimeout(() => createFloatingAnimation(floatAnim2, 1000).start(), 1000);
     setTimeout(() => createFloatingAnimation(floatAnim3, 2000).start(), 1500);
   }, []);
-  const [properties, setProperties] = useState<Property[]>([]);
 
-  // Fetch properties from API
-  const fetchProperties = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/properties?developer=${selectedDeveloper}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setProperties(result.data);
-      } else {
-        console.error('Error fetching properties:', result.error);
-      }
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProperties();
+  // Get properties based on selected developer
+  const properties = useMemo(() => {
+    return selectedDeveloper === 'dubai' ? dubaiDeveloperHouses : esgaiherTunisiaHouses;
   }, [selectedDeveloper]);
 
   const filters = [
@@ -250,7 +393,7 @@ export default function BrowseProperties() {
                 styles.developerOptionText,
                 selectedDeveloper === 'esgaiher' && styles.activeDeveloperOptionText
               ]}>
-                🏛️ Tunisia (Esghaier)
+                🏛️ Anga Esghaier - Esghaier Immobilière
               </Text>
             </TouchableOpacity>
           </View>

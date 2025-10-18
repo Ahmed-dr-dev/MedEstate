@@ -31,12 +31,9 @@ export default function BuyerLayout() {
     return currentIndex > previousIndex ? 'slide_from_right' : 'slide_from_left';
   };
 
-  // Hide bottom navigation for PropertyDetails, LoanSimulator, AddProperty, EditProperty, and MyProperties screens
+  // Hide bottom navigation for PropertyDetails, LoanSimulator, and other full-screen pages
   const shouldShowBottomNav = !pathname.includes('PropertyDetails') && 
                               !pathname.includes('LoanSimulator') && 
-                              !pathname.includes('AddProperty') &&
-                              !pathname.includes('EditProperty') &&
-                              !pathname.includes('MyProperties') &&
                               !pathname.includes('NewLoanApplication') &&
                               !pathname.includes('LoanApplicationResults');
 
@@ -76,9 +73,6 @@ export default function BuyerLayout() {
         <Stack.Screen name="LoanApplicationResults" />
         <Stack.Screen name="LoanSimulator" />
         <Stack.Screen name="NewLoanApplication" />
-        <Stack.Screen name="AddProperty" />
-        <Stack.Screen name="MyProperties" />
-        <Stack.Screen name="EditProperty" />
       </Stack>
       {shouldShowBottomNav && <BuyerBottomNavigation />}
     </View>

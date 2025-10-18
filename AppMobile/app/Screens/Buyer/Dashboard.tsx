@@ -245,29 +245,6 @@ export default function BuyerDashboard() {
         >
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
-          
-            
-            <TouchableOpacity 
-              style={styles.quickActionCard}
-              onPress={() => router.push('/Screens/Buyer/AddProperty')}
-            >
-              <View style={styles.quickActionIconContainer}>
-                <Text style={styles.quickActionIcon}>🏠</Text>
-              </View>
-              <Text style={styles.quickActionTitle}>Post Property</Text>
-              <Text style={styles.quickActionSubtitle}>List for sale</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.quickActionCard}
-              onPress={() => router.push('/Screens/Buyer/MyProperties')}
-            >
-              <View style={styles.quickActionIconContainer}>
-                <Text style={styles.quickActionIcon}>📋</Text>
-              </View>
-              <Text style={styles.quickActionTitle}>My Properties</Text>
-              <Text style={styles.quickActionSubtitle}>Manage listings</Text>
-            </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.quickActionCard}
@@ -280,6 +257,16 @@ export default function BuyerDashboard() {
               <Text style={styles.quickActionSubtitle}>Calculate loans</Text>
             </TouchableOpacity>
             
+            <TouchableOpacity 
+              style={styles.quickActionCard}
+              onPress={() => router.push('/Screens/Buyer/LoanApplication')}
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>💰</Text>
+              </View>
+              <Text style={styles.quickActionTitle}>Apply Loan</Text>
+              <Text style={styles.quickActionSubtitle}>Get financing</Text>
+            </TouchableOpacity>
           
           </View>
         </Animated.View>

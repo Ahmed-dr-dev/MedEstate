@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,13 +16,15 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/constants/api';
 
+
+
 interface Property {
   id: string;
   title: string;
   price: number;
   location: string;
   description?: string;
-  images?: string[];
+  images?: any[];
   bedrooms?: number;
   bathrooms?: number;
   area?: number;
@@ -31,7 +33,171 @@ interface Property {
     display_name: string;
     phone: string;
   };
+  created_at?: string;
+  updated_at?: string;
 }
+
+// Mock data for Dubai developer houses (Acube promotion)
+const dubaiDeveloperHouses: Property[] = [
+  {
+    id: 'dubai-1',
+    title: 'Luxury Villa in Palm Jumeirah',
+    description: 'Stunning waterfront villa with private beach access and panoramic views of the Arabian Gulf.',
+    price: 8500000,
+    location: 'Palm Jumeirah, Dubai, UAE',
+    bedrooms: 6,
+    bathrooms: 7,
+    area: 8500,
+    property_type: 'Villa',
+    images: [
+      '../../logos/acube1.jpg',
+      '../../logos/acube 2.jpg',
+      '../../logos/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'dubai-2',
+    title: 'Modern Apartment in Downtown Dubai',
+    description: 'Contemporary apartment in the heart of Dubai with Burj Khalifa views and premium amenities.',
+    price: 3200000,
+    location: 'Downtown Dubai, UAE',
+    bedrooms: 3,
+    bathrooms: 3,
+    area: 2200,
+    property_type: 'Apartment',
+    images: [
+      '../../logos/acube1.jpg',
+      '../../logos/acube 2.jpg',
+      '../../logos/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'dubai-3',
+    title: 'Penthouse in Marina Walk',
+    description: 'Exclusive penthouse with private terrace overlooking Dubai Marina and the Arabian Gulf.',
+    price: 12000000,
+    location: 'Dubai Marina, UAE',
+    bedrooms: 4,
+    bathrooms: 5,
+    area: 4500,
+    property_type: 'Penthouse',
+    images: [
+      '../../logos/acube1.jpg',
+      '../../logos/acube 2.jpg',
+      '../../logos/acube 3.jpg',
+    ],
+    owner: {
+      display_name: 'Acube - Dubai',
+      phone: '+971-4-123-4567'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+];
+
+// Mock data for Anga Esghaier developer houses (Esghaier Immobilière promotion)
+const esgaiherTunisiaHouses: Property[] = [
+  {
+    id: 'esgaiher-1',
+    title: 'Villa Moderne à Sidi Bou Saïd',
+    description: 'Villa contemporaine avec vue sur la mer Méditerranée et architecture traditionnelle tunisienne.',
+    price: 450000,
+    location: 'Sidi Bou Saïd, Tunis, Tunisie',
+    bedrooms: 4,
+    bathrooms: 3,
+    area: 280,
+    property_type: 'Villa',
+    images: [
+      '../../logos/Anga.jpg',
+      '../../logos/anga2.jpg',
+      '../../logos/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-2',
+    title: 'Appartement de Luxe à Carthage',
+    description: 'Appartement haut de gamme dans le quartier historique de Carthage avec vue sur les ruines antiques.',
+    price: 320000,
+    location: 'Carthage, Tunis, Tunisie',
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 180,
+    property_type: 'Apartment',
+    images: [
+      '../../logos/Anga.jpg',
+      '../../logos/anga2.jpg',
+      '../../logos/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-3',
+    title: 'Villa Familiale à La Marsa',
+    description: 'Villa spacieuse pour famille avec jardin privé et piscine, proche des plages de La Marsa.',
+    price: 680000,
+    location: 'La Marsa, Tunis, Tunisie',
+    bedrooms: 5,
+    bathrooms: 4,
+    area: 350,
+    property_type: 'Villa',
+    images: [
+      '../../logos/Anga.jpg',
+      '../../logos/anga2.jpg',
+      '../../logos/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'esgaiher-4',
+    title: 'Studio Moderne à Tunis Centre',
+    description: 'Studio moderne et fonctionnel au cœur de Tunis, idéal pour investissement locatif.',
+    price: 85000,
+    location: 'Tunis Centre, Tunisie',
+    bedrooms: 1,
+    bathrooms: 1,
+    area: 45,
+    property_type: 'Studio',
+      images: [
+      '../../logos/Anga.jpg',
+      '../../logos/anga2.jpg',
+      '../../logos/download.jpg',
+    ],
+    owner: {
+      display_name: 'Esghaier Immobilier - Anga Esghaier',
+      phone: '+216-71-123-456'
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+];
 
 interface Bank {
   id: string;
@@ -47,13 +213,14 @@ export default function NewLoanApplication() {
   // State management
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loadingProperties, setLoadingProperties] = useState(false);
   const [showPropertySelection, setShowPropertySelection] = useState(false);
   const [showBankSelection, setShowBankSelection] = useState(false);
   const [selectedDeveloper, setSelectedDeveloper] = useState('dubai'); // 'dubai', 'esgaiher'
   
-  // Data
-  const [properties, setProperties] = useState<Property[]>([]);
+  // Get properties based on selected developer
+  const properties = useMemo(() => {
+    return selectedDeveloper === 'dubai' ? dubaiDeveloperHouses : esgaiherTunisiaHouses;
+  }, [selectedDeveloper]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
   const [banks] = useState<Bank[]>([
@@ -127,36 +294,6 @@ export default function NewLoanApplication() {
     { id: 4, title: 'Insurance', description: 'Property insurance options' },
     { id: 5, title: 'Review & Submit', description: 'Review and submit application' }
   ];
-
-  // Fetch properties on component mount and when developer changes
-  useEffect(() => {
-    fetchProperties(selectedDeveloper);
-  }, [selectedDeveloper]);
-
-  const fetchProperties = async (developer: string = 'all') => {
-    setLoadingProperties(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/properties?developer=${developer}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success && Array.isArray(result.data)) {
-        setProperties(result.data);
-      } else {
-        console.error('API response error:', result);
-        Alert.alert('Error', result.error || 'Failed to fetch properties');
-      }
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-      Alert.alert('Error', 'Failed to fetch properties. Please check your connection and try again.');
-    } finally {
-      setLoadingProperties(false);
-    }
-  };
 
   const handlePropertySelect = (property: Property) => {
     setSelectedProperty(property);
@@ -796,21 +933,10 @@ console.log(submitFormData);
               </TouchableOpacity>
             </View>
             
-            {loadingProperties ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#3b82f6" />
-                <Text style={styles.loadingText}>Loading properties...</Text>
-              </View>
-            ) : properties.length === 0 ? (
+            {properties.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyTitle}>No Properties Available</Text>
-                <Text style={styles.emptySubtitle}>No properties found. Please try again later.</Text>
-                <TouchableOpacity 
-                  style={styles.retryButton}
-                  onPress={() => fetchProperties(selectedDeveloper)}
-                >
-                  <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
+                <Text style={styles.emptySubtitle}>Please select a developer to view properties.</Text>
               </View>
             ) : (
               properties.map((property: Property) => (
@@ -822,7 +948,7 @@ console.log(submitFormData);
                   <View style={styles.propertyImageContainer}>
                     {property.images && property.images.length > 0 ? (
                       <Image 
-                        source={{ uri: property.images[0] }} 
+                        source={property.images[0]} 
                         style={styles.propertyImage}
                         resizeMode="cover"
                       />
